@@ -7,29 +7,59 @@
     <title>OdontoAi</title>
 
     <link rel="stylesheet" href="style.css">
-    <style>
-        body {
-            background-color: #f6f3fb;
-        }
-    </style>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
 </head>
 
 <section id="loginPage"></section>
 
 <body>
-    <header> <!--Cabeçalho-->
-        <nav class="Cabecalho">
-        <div>
-            <h1>
-                OdontoAi
-            </h1>
-            <p>
-                Dashboard do Dentista
-            </p>
-        </div>
-        </nav>
-    </header>
+    <div class="container"> <!--Barra Lateral-->
+        <aside>
+            <div class="top">
+                <div class="logo">
+                    <img src="./images/OdontoAi_Logo.png">
+                    <h2>Odonto<span class="ColorAi">AI</span></h2>
+                </div>
 
+                <div class="close" id="close-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </div>
+            </div>
+
+            <div class="sidebar"> <!--Lateral-->
+                <a href="#" class="active">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <h3>DashBoard</h3>
+                </a>
+
+                <a href="#">
+                    <span class="material-symbols-outlined">person</span>
+                    <h3>Clientes</h3>
+                </a>    
+
+                <a href="#">
+                    <span class="material-symbols-outlined">calendar_month</span>
+                    <h3>Agendamentos</h3>
+                </a>
+
+                <a href="#">
+                    <span class="material-symbols-outlined">chat</span>
+                    <h3>Chat</h3>
+                    <span class="message-count">13</span>
+                </a> 
+                    
+                <a href="#">
+                    <span class="material-symbols-outlined">settings</span>
+                    <h3>Configurações</h3>
+                </a> 
+
+                <a href="#">
+                    <span class="material-symbols-outlined">logout</span>
+                    <h3>Sair</h3>
+                </a>
+            </div>
+        </aside>
+    </div>
 </body>
 
 </html>
