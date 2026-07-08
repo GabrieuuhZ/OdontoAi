@@ -287,7 +287,8 @@ main .icones > div:hover {
     box-shadow: none;
 }
 main .icones > div span {
-    flex-shrink: 0;               
+    flex-shrink: 0;        
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;       
     display: flex;
     align-items: center;
     justify-content: center;
@@ -297,7 +298,6 @@ main .icones > div span {
     border-radius: var(--border-radius-2);
     color: var(--color-white);
     font-size: 1.6rem;
-
 }
 
 main .icones > div.pacientes span {
