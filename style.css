@@ -14,7 +14,7 @@
     --color-primary-variant: #111e88;
     --color-dark-variant: #677483;
     --color-background: #ffffff;
-    --color-background2: #f4f9ffec;
+    --color-background2: #e7f1ffec;
     --color-AI: #1E90FF;
     --color-pacientes: #2aad82;
     --color-agendamentos: #7452b3;
@@ -144,6 +144,8 @@ aside {
     height: 100vh;
 }
 
+/* ========== SideBar box ============= */
+
 aside .top {
     display: flex;
     align-items: center;
@@ -168,12 +170,11 @@ aside .logo img {
 aside .close {
     display: none;
 }
-
 /* ========== SideBar ============= */
 
 aside .sidebar {
     display: flex;
-    background-color: #e3efff;
+    background: var(--color-background);
     flex-direction: column;
     height: 88vh;
     position: relative;
@@ -220,12 +221,12 @@ aside .sidebar a.active::before {
     background: var(--color-primary);
 }
 
-aside .slidebar a.active span {
+aside .sidebar a.active span {
     color: var(--color-primary);
     margin-left: calc(1rem - 3px);
 }
 
-aside .slidebar a:hover {
+aside .sidebar a:hover {
     color: var(--color-primary);
 }
 
@@ -261,6 +262,8 @@ main .date input[type="date"] {
     color: var(--color-dark);
 }
 
+/*========= ICONES =========== */
+
 main .icones {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -268,6 +271,7 @@ main .icones {
 }
 
 main .icones > div {
+    background: var(--color-background);
     display: flex;
     flex-wrap: wrap;             
     align-items: center;
@@ -282,7 +286,6 @@ main .icones > div {
 main .icones > div:hover {
     box-shadow: none;
 }
-
 main .icones > div span {
     flex-shrink: 0;               
     display: flex;
