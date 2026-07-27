@@ -23,98 +23,403 @@
                 </div>
 
                 <div class="close" id="close-btn">
-                    <span class="material-symbols-outlined">close</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </div>
             </div>
 
             <div class="sidebar"> <!--Abas Lateral-->
                 <a href="#" class="active">
-                    <span class="material-symbols-outlined">dashboard</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
                     <h3>DashBoard</h3>
                 </a>
 
                 <a href="#">
-                    <span class="material-symbols-outlined">person</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">person</span>
                     <h3>Clientes</h3>
                 </a>
 
                 <a href="#">
-                    <span class="material-symbols-outlined">calendar_month</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">robot_2</span>
+                    <h3>IA</h3>
+                </a>
+
+                <a href="#">
+                    <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
                     <h3>Agendamentos</h3>
                 </a>
 
                 <a href="#">
-                    <span class="material-symbols-outlined">chat</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">chat</span>
                     <h3>Chat</h3>
                     <span class="message-count">13</span>
                 </a>
 
                 <a href="#">
-                    <span class="material-symbols-outlined">settings</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
                     <h3>Configurações</h3>
                 </a>
 
                 <a href="#">
-                    <span class="material-symbols-outlined">logout</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">logout</span>
                     <h3>Sair</h3>
                 </a>
             </div>
         </aside>
         <!--Lateral fim-->
         <main>
-            <h1>DashBoard</h1>
-            <div class="date">
-                <input type="date">
+            <!-- CABEÇALHO -->
+            <div class="main-header">
+                <div class="greeting">
+                    <h1>Bom dia, <span class="primary">Dr. Carlos</span></h1>
+                    <p>Bem-vindo à OdontoAI</p>
+                </div>
+
+                <div class="header-actions">
+                    <div class="date">
+                        <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+                        <input type="date" id="today-date" aria-label="Data selecionada">
+                    </div>
+
+                    <div class="notification" role="button" tabindex="0" aria-label="Ver notificações">
+                        <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+                        <span class="dot" aria-hidden="true"></span>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="profile" role="button" tabindex="0" aria-label="Abrir menu do perfil">
+                        <div class="profile-photo">
+                            <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                        </div>
+                        <div class="profile-info">
+                            <h5>Dr. Carlos</h5>
+                            <small class="text-muted">Dentista</small>
+                        </div>
+                        <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                    </div>
+                </div>
             </div>
-            <div class="icones"> <!--Classe icones-->
-                <!--ICONES CONSULTAS-->
+                                                               <!--COMEÇO DASH BOARD-->
+            <!-- CARDS DE INDICADORES -->
+            <div class="icones">
+                <!--CONSULTAS HOJE-->
                 <div class="consultas">
-                    <span class="material-symbols-outlined">dentistry</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">dentistry</span>
                     <div class="middle">
-                        <div class="left">
-                            <h3>Consultas Hoje</h3>
-                            <h1>23</h1>
-                        </div>
+                        <h3>Consultas Hoje</h3>
+                        <h1>23</h1>
                     </div>
-                    <small class="text-muted">% vs ontem</small>
+                    <small><span class="material-symbols-outlined" aria-hidden="true">arrow_upward</span> <b
+                            class="success">15%</b> vs
+                        ontem</small>
                 </div>
-                <!--ICONES PACIENTES-->
+                <!--PACIENTES-->
                 <div class="pacientes">
-                    <span class="material-symbols-outlined">group</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">group</span>
                     <div class="middle">
-                        <div class="left">
-                            <h3>Pacientes</h3>
-                            <h1>1.284</h1>
-                        </div>
+                        <h3>Pacientes</h3>
+                        <h1>1.284</h1>
                     </div>
-                    <small class="text-muted">##</small>
+                    <small><span class="material-symbols-outlined" aria-hidden="true">arrow_upward</span> <b
+                            class="success">8%</b> este
+                        mês</small>
                 </div>
-                <!--ICONE AGENDAMENTO-->
+                <!--AGENDAMENTOS-->
                 <div class="agendamentos">
-                    <span class="material-symbols-outlined">calendar_today</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">calendar_today</span>
                     <div class="middle">
-                        <div class="left">
-                            <h3>Agendamentos</h3>
-                            <h1>18</h1>
-                        </div>
+                        <h3>Agendamentos</h3>
+                        <h1>18</h1>
                     </div>
                     <small class="text-muted">Hoje</small>
                 </div>
-                <!--ICONE FATURAMENTO-->
+                <!--FATURAMENTO-->
                 <div class="faturamento">
-                    <span class="material-symbols-outlined">attach_money</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">attach_money</span>
                     <div class="middle">
-                        <div class="left">
-                            <h3>Faturamento</h3>
-                            <h1>R$ 8.430,00</h1>
+                        <h3>Faturamento</h3>
+                        <h1>R$ 8.430,00</h1>
+                    </div>
+                    <small><span class="material-symbols-outlined" aria-hidden="true">arrow_upward</span> <b
+                            class="success">12%</b> este
+                        mês</small>
+                </div>
+            </div>
+
+            <!--GRÁFICO SEMANAL + AGENDA DE HOJE-->
+            <div class="charts-row">
+                <div class="card weekly-chart">
+                    <div class="card-header">
+                        <h3>Consultas na semana</h3>
+                        <select>
+                            <option>Esta semana</option>
+                            <option>Semana passada</option>
+                        </select>
+                    </div>
+
+                    <div class="bar-chart">
+                        <div class="bar-column">
+                            <span class="bar-value">8</span>
+                            <div class="bar" style="height: 44%;"></div>
+                            <small class="bar-day">Seg</small>
+                        </div>
+                        <div class="bar-column">
+                            <span class="bar-value">12</span>
+                            <div class="bar" style="height: 67%;"></div>
+                            <small class="bar-day">Ter</small>
+                        </div>
+                        <div class="bar-column">
+                            <span class="bar-value">16</span>
+                            <div class="bar" style="height: 89%;"></div>
+                            <small class="bar-day">Qua</small>
+                        </div>
+                        <div class="bar-column">
+                            <span class="bar-value">11</span>
+                            <div class="bar" style="height: 61%;"></div>
+                            <small class="bar-day">Qui</small>
+                        </div>
+                        <div class="bar-column">
+                            <span class="bar-value">18</span>
+                            <div class="bar" style="height: 100%;"></div>
+                            <small class="bar-day">Sex</small>
+                        </div>
+                        <div class="bar-column">
+                            <span class="bar-value">6</span>
+                            <div class="bar" style="height: 33%;"></div>
+                            <small class="bar-day">Sáb</small>
+                        </div>
+                        <div class="bar-column">
+                            <span class="bar-value">3</span>
+                            <div class="bar" style="height: 17%;"></div>
+                            <small class="bar-day">Dom</small>
                         </div>
                     </div>
-                    <small class="text-muted">##</small>
                 </div>
-                <!--FIM ICONES DASHBOARD-->
+
+                <div class="card agenda-hoje">
+                    <div class="card-header">
+                        <h3>Agenda de Hoje</h3>
+                        <a href="#">Ver agenda</a>
+                    </div>
+
+                    <ul class="agenda-list">
+                        <li class="agenda-item">
+                            <span class="agenda-time">08:00</span>
+                            <span class="agenda-bar confirmado"></span>
+                            <div class="agenda-info">
+                                <h4>Maria Silva</h4>
+                                <small class="text-muted">Limpeza Dental</small>
+                            </div>
+                            <span class="status confirmado">Confirmado</span>
+                        </li>
+                        <li class="agenda-item">
+                            <span class="agenda-time">09:00</span>
+                            <span class="agenda-bar esperando"></span>
+                            <div class="agenda-info">
+                                <h4>Pedro Oliveira</h4>
+                                <small class="text-muted">Clareamento</small>
+                            </div>
+                            <span class="status esperando">Esperando</span>
+                        </li>
+                        <li class="agenda-item">
+                            <span class="agenda-time">10:30</span>
+                            <span class="agenda-bar atendimento"></span>
+                            <div class="agenda-info">
+                                <h4>Ana Costa</h4>
+                                <small class="text-muted">Restauração</small>
+                            </div>
+                            <span class="status atendimento">Em atendimento</span>
+                        </li>
+                        <li class="agenda-item">
+                            <span class="agenda-time">14:00</span>
+                            <span class="agenda-bar confirmado"></span>
+                            <div class="agenda-info">
+                                <h4>Lucas Martins</h4>
+                                <small class="text-muted">Avaliação</small>
+                            </div>
+                            <span class="status confirmado">Confirmado</span>
+                        </li>
+                        <li class="agenda-item">
+                            <span class="agenda-time">15:30</span>
+                            <span class="agenda-bar agendado"></span>
+                            <div class="agenda-info">
+                                <h4>Juliana Santos</h4>
+                                <small class="text-muted">Canal</small>
+                            </div>
+                            <span class="status agendado">Agendado</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!--PRÓXIMAS CONSULTAS + STATUS + MENSAGENS/ALERTAS-->
+            <div class="lists-row">
+                <div class="card proximas-consultas">
+                    <h3>Próximas Consultas</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Horário</th>
+                                <th>Paciente</th>
+                                <th>Dentista</th>
+                                <th>Procedimento</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>08:00</td>
+                                <td>Maria Silva</td>
+                                <td>Dr. Carlos</td>
+                                <td>Limpeza Dental</td>
+                                <td><span class="status confirmado">Confirmado</span></td>
+                            </tr>
+                            <tr>
+                                <td>09:00</td>
+                                <td>Pedro Oliveira</td>
+                                <td>Dr. Carlos</td>
+                                <td>Clareamento</td>
+                                <td><span class="status esperando">Esperando</span></td>
+                            </tr>
+                            <tr>
+                                <td>10:30</td>
+                                <td>Ana Costa</td>
+                                <td>Dra. Julia</td>
+                                <td>Restauração</td>
+                                <td><span class="status atendimento">Em atendimento</span></td>
+                            </tr>
+                            <tr>
+                                <td>14:00</td>
+                                <td>Lucas Martins</td>
+                                <td>Dr. Carlos</td>
+                                <td>Avaliação</td>
+                                <td><span class="status confirmado">Confirmado</span></td>
+                            </tr>
+                            <tr>
+                                <td>15:30</td>
+                                <td>Juliana Santos</td>
+                                <td>Dra. Julia</td>
+                                <td>Canal</td>
+                                <td><span class="status agendado">Agendado</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <a href="#" class="ver-todas">Ver todas as consultas</a>
+                </div>
+
+                <div class="card status-donut">
+                    <h3>Consultas por Status</h3>
+                    <div class="donut">
+                        <div class="donut-hole"></div>
+                    </div>
+                    <ul class="legend">
+                        <li><span class="dot green"></span> <span>Concluídas</span> <b>60%</b></li>
+                        <li><span class="dot yellow"></span> <span>Agendadas</span> <b>25%</b></li>
+                        <li><span class="dot red"></span> <span>Canceladas</span> <b>15%</b></li>
+                    </ul>
+                </div>
+
+                <div class="right-column">
+                    <div class="card messages">
+                        <div class="card-header">
+                            <h3>Últimas Mensagens</h3>
+                        </div>
+                        <ul>
+                            <li>
+                                <div class="avatar blue">J</div>
+                                <div class="msg-info">
+                                    <h4>João Silva</h4>
+                                    <small class="text-muted">Confirmou a consulta de amanhã.</small>
+                                </div>
+                                <small class="msg-time">10:23</small>
+                            </li>
+                            <li>
+                                <div class="avatar purple">M</div>
+                                <div class="msg-info">
+                                    <h4>Maria Oliveira</h4>
+                                    <small class="text-muted">Preciso remarcar minha consulta.</small>
+                                </div>
+                                <small class="msg-time">09:15</small>
+                            </li>
+                            <li>
+                                <div class="avatar green">A</div>
+                                <div class="msg-info">
+                                    <h4>Ana Clara</h4>
+                                    <small class="text-muted">Obrigado pelo atendimento!</small>
+                                </div>
+                                <small class="msg-time">Ontem</small>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card alerts">
+                        <h3>Alertas</h3>
+                        <ul>
+                            <li tabindex="0" role="button" aria-label="3 pacientes faltaram hoje">
+                                <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                                <span>3 pacientes faltaram hoje</span>
+                                <span class="material-symbols-outlined chevron" aria-hidden="true">chevron_right</span>
+                            </li>
+                            <li tabindex="0" role="button" aria-label="Estoque baixo de anestésico">
+                                <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                                <span>Estoque baixo de anestésico</span>
+                                <span class="material-symbols-outlined chevron" aria-hidden="true">chevron_right</span>
+                            </li>
+                            <li tabindex="0" role="button" aria-label="5 pagamentos pendentes">
+                                <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                                <span>5 pagamentos pendentes</span>
+                                <span class="material-symbols-outlined chevron" aria-hidden="true">chevron_right</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!--ATIVIDADES RECENTES-->
+            <div class="card activities-row">
+                <div class="card-header">
+                    <h3>Atividades Recentes</h3>
+                    <a href="#">Ver todas</a>
+                </div>
+
+                <div class="activities-grid">
+                    <div class="activity">
+                        <span class="icon blue material-symbols-outlined">person</span>
+                        <div class="activity-info">
+                            <h4>João Silva</h4>
+                            <small class="text-muted">Realizou login no sistema</small>
+                            <small class="text-muted">10:24</small>
+                        </div>
+                    </div>
+                    <div class="activity">
+                        <span class="icon green material-symbols-outlined">add</span>
+                        <div class="activity-info">
+                            <h4>Maria Oliveira</h4>
+                            <small class="text-muted">Novo paciente cadastrado</small>
+                            <small class="text-muted">09:45</small>
+                        </div>
+                    </div>
+                    <div class="activity">
+                        <span class="icon red material-symbols-outlined">event_busy</span>
+                        <div class="activity-info">
+                            <h4>Consulta cancelada</h4>
+                            <small class="text-muted">Pedro Oliveira cancelou</small>
+                            <small class="text-muted">09:15</small>
+                        </div>
+                    </div>
+                    <div class="activity">
+                        <span class="icon purple material-symbols-outlined">event_available</span>
+                        <div class="activity-info">
+                            <h4>Novo agendamento</h4>
+                            <small class="text-muted">Ana Costa - 19/06 às 10:30</small>
+                            <small class="text-muted">08:50</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
+    <script src="index.js"></script>
 </body>
 
 </html>
