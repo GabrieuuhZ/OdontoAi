@@ -1,1 +1,0 @@
-document.getElementById('today-date').valueAsDate = new Date(); /* DATA ATUAL */

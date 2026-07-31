@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OdontoAi</title>
+
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+
+<body>
+    <div class="container"> <!--Barra Lateral-->
+        <aside>
+            <div class="top">
+                <div class="logo">
+                    <img src="./assets/images/OdontoAi_Logo.png">
+                    <h2>Odonto<span class="ColorAi">AI</span></h2>
+                </div>
+
+                <div class="close" id="close-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </div>
+            </div>
+
+            <div class="sidebar"> <!--Abas Lateral-->
+                <a href="index.html" class="active">
+                    <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+                    <h3>DashBoard</h3>
+                </a>
+
+                <a href="clientes.html">
+                    <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                    <h3>Clientes</h3>
+                </a>
+
+                <a href="#">
+                    <span class="material-symbols-outlined" aria-hidden="true">robot_2</span>
+                    <h3>IA</h3>
+                </a>
+
+                <a href="agendamentos.html">
+                    <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+                    <h3>Agendamentos</h3>
+                </a>
+
+                <a href="#">
+                    <span class="material-symbols-outlined" aria-hidden="true">chat</span>
+                    <h3>Chat</h3>
+                    <span class="message-count">13</span>
+                </a>
+
+                <a href="#">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                    <h3>Configurações</h3>
+                </a>
+
+                <a href="#">
+                    <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+                    <h3>Sair</h3>
+                </a>
+            </div>
+        </aside>
+        <!--Lateral fim-->
+
+        <main id="conteudo">
+        </main>
+    </div>
+
+    <script src="assets/js/modal.js"></script>
+    <script src="assets/js/dados.js"></script>
+    <script src="assets/js/clientes.js"></script>
+    <script src="assets/js/cliente-detalhe.js"></script>
+    <script src="assets/js/agendamentos.js"></script>
+    <script src="assets/js/index.js"></script>
+</body>
+
+</html>

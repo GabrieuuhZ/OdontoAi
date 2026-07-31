@@ -1,0 +1,102 @@
+<!-- CABEÇALHO -->
+<div class="main-header">
+    <div class="greeting">
+        <h1>Agendamentos</h1>
+        <p>Organize a agenda da clínica</p>
+    </div>
+
+    <div class="header-actions">
+        <button class="btn-primary" type="button" id="btn-novo-agendamento">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            Novo Agendamento
+        </button>
+    </div>
+</div>
+
+<!-- RESUMO -->
+<div class="resumo-cards">
+    <div class="card">
+        <h3 class="text-muted">Hoje</h3>
+        <h1 style="margin-top: 0.4rem;" id="resumo-hoje">18</h1>
+    </div>
+    <div class="card">
+        <h3 class="text-muted">Esta Semana</h3>
+        <h1 style="margin-top: 0.4rem;" class="primary">74</h1>
+    </div>
+    <div class="card">
+        <h3 class="text-muted">Confirmados</h3>
+        <h1 style="margin-top: 0.4rem;" class="success" id="resumo-confirmados">62</h1>
+    </div>
+    <div class="card">
+        <h3 class="text-muted">Cancelados/Faltas</h3>
+        <h1 style="margin-top: 0.4rem;" class="danger" id="resumo-cancelados">9</h1>
+    </div>
+</div>
+
+<!-- BARRA DE FILTROS -->
+<div class="filters-bar">
+    <div class="search-bar" style="min-width: 16rem;">
+        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+        <input type="text" placeholder="Pesquisar paciente" aria-label="Pesquisar paciente">
+    </div>
+
+    <div class="filter-select">
+        <span class="material-symbols-outlined" aria-hidden="true">stethoscope</span>
+        <select aria-label="Filtrar por dentista">
+            <option>Todos os dentistas</option>
+            <option>Dr. Carlos</option>
+            <option>Dra. Julia</option>
+        </select>
+    </div>
+
+    <div class="filter-select">
+        <span class="material-symbols-outlined" aria-hidden="true">dentistry</span>
+        <select aria-label="Filtrar por procedimento">
+            <option>Todos os procedimentos</option>
+            <option>Limpeza Dental</option>
+            <option>Clareamento</option>
+            <option>Restauração</option>
+            <option>Avaliação</option>
+            <option>Canal</option>
+        </select>
+    </div>
+
+    <div class="filter-date">
+        <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+        <input type="date" id="agenda-date" aria-label="Selecionar data">
+    </div>
+</div>
+
+<!-- CHIPS DE STATUS -->
+<div class="status-chips">
+    <span class="chip active" role="button" tabindex="0" data-status="todos">Todos</span>
+    <span class="chip" role="button" tabindex="0" data-status="agendado"><span class="dot" aria-hidden="true"></span> Agendado</span>
+    <span class="chip" role="button" tabindex="0" data-status="confirmado"><span class="dot" aria-hidden="true"></span> Confirmado</span>
+    <span class="chip" role="button" tabindex="0" data-status="concluido"><span class="dot" aria-hidden="true"></span> Concluído</span>
+    <span class="chip" role="button" tabindex="0" data-status="cancelado"><span class="dot" aria-hidden="true"></span> Cancelado</span>
+    <span class="chip" role="button" tabindex="0" data-status="faltou"><span class="dot" aria-hidden="true"></span> Faltou</span>
+</div>
+
+<!-- TABELA DE AGENDAMENTOS -->
+<div class="card table-card">
+    <div class="card-header">
+        <h3>Agendamentos de Hoje</h3>
+        <span class="text-muted" id="contador-agendamentos">18 agendamentos</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Horário</th>
+                <th>Paciente</th>
+                <th>Dentista</th>
+                <th>Procedimento</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tbody-agendamentos">
+            <!-- Preenchido pelo agendamentos.js a partir de dados.js -->
+        </tbody>
+    </table>
+</div>

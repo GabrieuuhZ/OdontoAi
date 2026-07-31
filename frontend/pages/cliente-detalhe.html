@@ -1,0 +1,132 @@
+<!-- CABEÇALHO -->
+<div class="main-header">
+    <div class="greeting">
+        <a href="clientes.html" class="text-muted" style="font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+            <span class="material-symbols-outlined" aria-hidden="true" style="font-size: 1rem;">arrow_back</span>
+            Voltar para Clientes
+        </a>
+        <h1 style="margin-top: 0.4rem;">Ficha do Paciente</h1>
+    </div>
+
+    <div class="header-actions">
+        <button class="btn-primary" type="button" id="btn-editar-cadastro">
+            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+            Editar Cadastro
+        </button>
+    </div>
+</div>
+
+<!-- DADOS DO PACIENTE -->
+<div class="card" style="margin-top: 1.4rem;">
+    <div class="paciente-header">
+        <div class="avatar-grande" aria-hidden="true">
+            <span class="material-symbols-outlined">person</span>
+        </div>
+        <div>
+            <h2 style="margin-bottom: 0.3rem;" id="ficha-nome">Maria Silva</h2>
+            <span class="status ativo" id="ficha-status">Ativo</span>
+        </div>
+    </div>
+
+    <div class="dados-grid">
+        <div class="campo">
+            <label>CPF</label>
+            <p id="ficha-cpf">123.456.789-00</p>
+        </div>
+        <div class="campo">
+            <label>Data de Nascimento</label>
+            <p id="ficha-nascimento">14/03/1988</p>
+        </div>
+        <div class="campo">
+            <label>Telefone</label>
+            <p id="ficha-telefone">(11) 98765-4321</p>
+        </div>
+        <div class="campo">
+            <label>Email</label>
+            <p id="ficha-email">maria.silva@email.com</p>
+        </div>
+        <div class="campo">
+            <label>Endereço</label>
+            <p id="ficha-endereco">Rua das Flores, 123 - São Paulo, SP</p>
+        </div>
+        <div class="campo">
+            <label>Convênio</label>
+            <p id="ficha-convenio">Particular</p>
+        </div>
+    </div>
+</div>
+
+<div class="charts-row" style="grid-template-columns: 1.4fr 1fr;">
+    <!-- HISTÓRICO DE CONSULTAS -->
+    <div class="card table-card">
+        <div class="card-header">
+            <h3>Histórico de Consultas</h3>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Dentista</th>
+                    <th>Procedimento</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>25/06/2025</td>
+                    <td>Dr. Carlos</td>
+                    <td>Limpeza Dental</td>
+                    <td><span class="status agendado">Agendado</span></td>
+                </tr>
+                <tr>
+                    <td>18/06/2025</td>
+                    <td>Dr. Carlos</td>
+                    <td>Limpeza Dental</td>
+                    <td><span class="status concluido">Concluído</span></td>
+                </tr>
+                <tr>
+                    <td>02/04/2025</td>
+                    <td>Dra. Julia</td>
+                    <td>Restauração</td>
+                    <td><span class="status concluido">Concluído</span></td>
+                </tr>
+                <tr>
+                    <td>15/01/2025</td>
+                    <td>Dr. Carlos</td>
+                    <td>Avaliação</td>
+                    <td><span class="status faltou">Faltou</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- DIAGNÓSTICOS / OBSERVAÇÕES -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Diagnósticos e Observações</h3>
+        </div>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <span class="timeline-date">18/06/2025 — Dr. Carlos</span>
+                    <h4>Limpeza de rotina</h4>
+                    <p>Sem alterações. Recomendado retorno em 6 meses.</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <span class="timeline-date">02/04/2025 — Dra. Julia</span>
+                    <h4>Restauração no dente 26</h4>
+                    <p>Cárie tratada com resina composta. Sem intercorrências.</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <span class="timeline-date">10/01/2025 — Dr. Carlos</span>
+                    <h4>Avaliação inicial</h4>
+                    <p>Paciente relatou sensibilidade no dente 26. Encaminhada para restauração.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

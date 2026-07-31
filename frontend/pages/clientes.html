@@ -1,0 +1,90 @@
+<!-- CABEÇALHO -->
+<div class="main-header">
+    <div class="greeting">
+        <h1>Clientes</h1>
+        <p>Gerencie os pacientes da sua clínica</p>
+    </div>
+
+    <div class="header-actions">
+        <div class="search-bar">
+            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <input type="text" placeholder="Buscar por nome, CPF ou telefone" aria-label="Buscar paciente">
+        </div>
+
+        <button class="btn-primary" type="button" id="btn-novo-paciente">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            Novo Paciente
+        </button>
+    </div>
+</div>
+
+<!-- RESUMO -->
+<div class="resumo-cards">
+    <div class="card">
+        <h3 class="text-muted">Total de Pacientes</h3>
+        <h1 style="margin-top: 0.4rem;" id="total-pacientes">1.284</h1>
+    </div>
+    <div class="card">
+        <h3 class="text-muted">Consultas Hoje</h3>
+        <h1 style="margin-top: 0.4rem;" class="primary">23</h1>
+    </div>
+    <div class="card">
+        <h3 class="text-muted">Próximos 7 dias</h3>
+        <h1 style="margin-top: 0.4rem;" class="primary">86</h1>
+    </div>
+    <div class="card">
+        <h3 class="text-muted">Pacientes Inativos</h3>
+        <h1 style="margin-top: 0.4rem;" class="danger">58</h1>
+    </div>
+</div>
+
+<!-- FILTROS -->
+<div class="filters-bar">
+    <div class="filter-select">
+        <span class="material-symbols-outlined" aria-hidden="true">filter_alt</span>
+        <select aria-label="Filtrar por status">
+            <option>Todos os status</option>
+            <option>Ativos</option>
+            <option>Inativos</option>
+        </select>
+    </div>
+
+    <div class="filter-select">
+        <span class="material-symbols-outlined" aria-hidden="true">sort</span>
+        <select aria-label="Ordenar por">
+            <option>Ordenar por nome</option>
+            <option>Ordenar por próxima consulta</option>
+            <option>Ordenar por última consulta</option>
+        </select>
+    </div>
+
+    <div class="filter-date">
+        <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+        <input type="date" aria-label="Próxima consulta a partir de">
+    </div>
+</div>
+
+<!-- TABELA DE PACIENTES -->
+<div class="card table-card">
+    <div class="card-header">
+        <h3>Todos os Pacientes</h3>
+        <span class="text-muted" id="contador-pacientes">1.284 pacientes</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>CPF</th>
+                <th>Telefone</th>
+                <th>Última Consulta</th>
+                <th>Próxima Consulta</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tbody-pacientes">
+            <!-- Preenchido pelo clientes.js a partir de dados.js -->
+        </tbody>
+    </table>
+</div>
