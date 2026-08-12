@@ -1301,3 +1301,297 @@ button:focus-visible {
         max-width: 100%;
     }
 }
+
+/* ============ CHAT ============ */
+
+.chat-card {
+    padding: 0;
+    display: flex;
+    height: 34rem;
+    overflow: hidden;
+}
+
+.chat-list-wrapper {
+    width: 20rem;
+    flex-shrink: 0;
+    border-right: 1px solid var(--color-info-light);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-list-header {
+    padding: 1.4rem 1.4rem 1rem;
+    border-bottom: 1px solid var(--color-info-light);
+}
+
+.chat-list-header h3 {
+    margin-bottom: 0.8rem;
+}
+
+.search-bar.mini {
+    min-width: 0;
+    padding: 0.45rem 0.9rem;
+}
+
+.chat-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.chat-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.9rem 1.4rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-info-light);
+    transition: background 150ms ease;
+}
+
+.chat-list-item:hover {
+    background: var(--color-background2);
+}
+
+.chat-list-item.ativa {
+    background: var(--color-light);
+}
+
+.chat-list-item .msg-info h4 {
+    font-weight: 600;
+}
+
+.chat-list-item .msg-info small {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 10rem;
+}
+
+.chat-window {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.chat-window-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1.4rem;
+    border-bottom: 1px solid var(--color-info-light);
+}
+
+.chat-window-header h4 {
+    font-weight: 600;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.message-bubble {
+    max-width: 65%;
+    padding: 0.7rem 1rem;
+    border-radius: var(--border-radius-2);
+    font-size: 0.85rem;
+}
+
+.message-bubble p {
+    color: inherit;
+}
+
+.message-bubble small {
+    display: block;
+    margin-top: 0.3rem;
+    opacity: 0.7;
+    font-size: 0.68rem;
+}
+
+.message-bubble.outro {
+    align-self: flex-start;
+    background: var(--color-background2);
+    color: var(--color-dark);
+    border-bottom-left-radius: 0.2rem;
+}
+
+.message-bubble.minha {
+    align-self: flex-end;
+    background: var(--color-primary);
+    color: var(--color-white);
+    border-bottom-right-radius: 0.2rem;
+}
+
+.message-bubble.minha small {
+    color: var(--color-white);
+}
+
+.chat-input-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.4rem;
+    border-top: 1px solid var(--color-info-light);
+}
+
+.chat-input-bar input {
+    flex: 1;
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 0.7rem 1rem;
+    background: var(--color-background2);
+    border-radius: var(--border-radius-1);
+    color: var(--color-dark);
+}
+
+.chat-send-btn {
+    width: 2.6rem;
+    height: 2.6rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 200ms ease;
+}
+
+.chat-send-btn:hover {
+    opacity: 0.9;
+}
+
+@media screen and (max-width: 1100px) {
+    .chat-card {
+        flex-direction: column;
+        height: auto;
+    }
+    .chat-list-wrapper {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--color-info-light);
+    }
+    .chat-messages {
+        max-height: 22rem;
+    }
+}
+
+/* ============ CONFIGURAÇÕES ============ */
+
+.config-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.6rem;
+}
+
+.config-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.config-toggle-row h4 {
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+/* Interruptor (toggle switch) de modo escuro */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 3rem;
+    height: 1.7rem;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--color-info-light);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 200ms ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 1.3rem;
+    height: 1.3rem;
+    left: 0.2rem;
+    top: 0.2rem;
+    background: var(--color-white);
+    border-radius: 50%;
+    transition: transform 200ms ease;
+    box-shadow: var(--box-shadow);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--color-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(1.3rem);
+}
+
+.toggle-switch input:focus-visible + .toggle-slider {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* ============ LOGIN ============ */
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-background2);
+}
+
+.login-card {
+    width: 24rem;
+    max-width: 90vw;
+}
+
+/* ============ MODO ESCURO ============ */
+/*
+   A técnica: redefinir as MESMAS variáveis de --root, só que dentro de
+   ".dark-mode" (classe que vai na tag <html>). Como todo o resto do CSS
+   já usa var(--color-...) em vez de cores fixas, o tema inteiro troca
+   sozinho, sem precisar duplicar nenhuma regra.
+*/
+.dark-mode {
+    --color-white: #1c1f2b;
+    --color-dark: #eef1f8;
+    --color-dark-variant: #b7bfd1;
+    --color-info-dark: #9aa3b8;
+    --color-info-light: #343a4d;
+    --color-light: rgba(132, 139, 200, 0.18);
+    --color-background: #242837;
+    --color-background2: #171923;
+    --box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.dark-mode .weekly-chart .bar {
+    background: var(--color-AI);
+}
+
+.dark-mode .status-donut .donut-hole {
+    background: var(--color-background);
+}

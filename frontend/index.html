@@ -9,6 +9,18 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!--
+        Aplica o modo escuro (se a pessoa já tinha ativado antes) o mais cedo
+        possível, ainda no <head>, antes da página desenhar qualquer coisa.
+        Se isso rodasse só depois, no index.js, dava pra ver um "flash" da
+        tela clara por uma fração de segundo antes de escurecer.
+    -->
+    <script>
+        if (localStorage.getItem('odontoai_dark_mode') === '1') {
+            document.documentElement.classList.add('dark-mode');
+        }
+    </script>
 </head>
 
 <body>
@@ -46,18 +58,18 @@
                     <h3>Agendamentos</h3>
                 </a>
 
-                <a href="#">
+                <a href="chat.html">
                     <span class="material-symbols-outlined" aria-hidden="true">chat</span>
                     <h3>Chat</h3>
                     <span class="message-count">13</span>
                 </a>
 
-                <a href="#">
+                <a href="configuracoes.html">
                     <span class="material-symbols-outlined" aria-hidden="true">settings</span>
                     <h3>Configurações</h3>
                 </a>
 
-                <a href="#">
+                <a href="#" id="btn-sair">
                     <span class="material-symbols-outlined" aria-hidden="true">logout</span>
                     <h3>Sair</h3>
                 </a>
@@ -74,6 +86,8 @@
     <script src="assets/js/clientes.js"></script>
     <script src="assets/js/cliente-detalhe.js"></script>
     <script src="assets/js/agendamentos.js"></script>
+    <script src="assets/js/chat.js"></script>
+    <script src="assets/js/configuracoes.js"></script>
     <script src="assets/js/index.js"></script>
 </body>
 

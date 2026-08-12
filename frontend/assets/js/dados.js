@@ -21,6 +21,64 @@ const SEED_AGENDAMENTOS = [
     { id: 6, horario: '15:30', paciente: 'Juliana Santos', dentista: 'Dra. Julia', procedimento: 'Canal', status: 'cancelado' },
 ];
 
+// Cada conversa tem um "dono" (paciente ou a recepcionista) e uma lista de mensagens.
+// autor: 'eu' = você (Dr. Carlos) mandou; 'outro' = a pessoa do outro lado mandou.
+const SEED_CONVERSAS = [
+    {
+        id: 1,
+        nome: 'João Silva',
+        papel: 'Paciente',
+        avatarLetra: 'J',
+        avatarCor: 'blue',
+        mensagens: [
+            { autor: 'outro', texto: 'Oi Dr. Carlos, posso confirmar minha consulta de amanhã?', hora: '10:20' },
+            { autor: 'outro', texto: 'Confirmou a consulta de amanhã.', hora: '10:23' },
+            { autor: 'eu', texto: 'Perfeito, João! Te espero às 09h.', hora: '10:25' },
+        ],
+    },
+    {
+        id: 2,
+        nome: 'Maria Oliveira',
+        papel: 'Paciente',
+        avatarLetra: 'M',
+        avatarCor: 'purple',
+        mensagens: [
+            { autor: 'outro', texto: 'Doutor, preciso remarcar minha consulta.', hora: '09:15' },
+            { autor: 'eu', texto: 'Sem problemas, qual dia funciona melhor pra você?', hora: '09:20' },
+        ],
+    },
+    {
+        id: 3,
+        nome: 'Ana Clara',
+        papel: 'Paciente',
+        avatarLetra: 'A',
+        avatarCor: 'green',
+        mensagens: [
+            { autor: 'outro', texto: 'Obrigado pelo atendimento!', hora: 'Ontem' },
+            { autor: 'eu', texto: 'Fico feliz que tenha gostado, Ana! Qualquer coisa é só chamar.', hora: 'Ontem' },
+        ],
+    },
+    {
+        id: 4,
+        nome: 'Recepção (Camila)',
+        papel: 'Recepcionista',
+        avatarLetra: 'C',
+        avatarCor: 'blue',
+        mensagens: [
+            { autor: 'outro', texto: 'Dr. Carlos, o paciente das 14h chegou mais cedo.', hora: '13:40' },
+            { autor: 'eu', texto: 'Ok, pode encaminhar pra sala 2.', hora: '13:42' },
+        ],
+    },
+];
+
+// Dados do perfil do dentista logado (nome, CRM/CRO, email de login)
+const SEED_PERFIL = {
+    nome: 'Dr. Carlos',
+    crm: 'CRO-SP 45.678',
+    email: 'carlos@odontoai.com',
+    cargo: 'Cirurgião-Dentista',
+};
+
 function carregar(chave, seed) {
     try {
         const bruto = localStorage.getItem(chave);
@@ -44,6 +102,18 @@ const db = {
     },
     salvarAgendamentos(lista) {
         localStorage.setItem('odontoai_agendamentos', JSON.stringify(lista));
+    },
+    getConversas() {
+        return carregar('odontoai_conversas', SEED_CONVERSAS);
+    },
+    salvarConversas(lista) {
+        localStorage.setItem('odontoai_conversas', JSON.stringify(lista));
+    },
+    getPerfil() {
+        return carregar('odontoai_perfil', SEED_PERFIL);
+    },
+    salvarPerfil(perfil) {
+        localStorage.setItem('odontoai_perfil', JSON.stringify(perfil));
     },
     proximoId(lista) {
         return lista.length ? Math.max(...lista.map((item) => item.id)) + 1 : 1;

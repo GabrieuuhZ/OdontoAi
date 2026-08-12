@@ -1,0 +1,38 @@
+<div class="main-header">
+    <div class="greeting">
+        <h1>Chat</h1>
+        <p>Converse com pacientes e a equipe da clínica</p>
+    </div>
+</div>
+
+<div class="card chat-card">
+    <!-- LISTA DE CONVERSAS -->
+    <aside class="chat-list-wrapper">
+        <div class="chat-list-header">
+            <h3>Conversas</h3>
+            <div class="search-bar mini">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input type="text" placeholder="Buscar conversa" aria-label="Buscar conversa" id="chat-busca">
+            </div>
+        </div>
+        <ul class="chat-list" id="chat-list"></ul>
+    </aside>
+
+    <!-- JANELA DA CONVERSA ATIVA -->
+    <div class="chat-window">
+        <div class="chat-window-header" id="chat-window-header">
+            <!-- preenchido pelo chat.js -->
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <!-- preenchido pelo chat.js -->
+        </div>
+
+        <form class="chat-input-bar" id="chat-input-form">
+            <input type="text" id="chat-input" placeholder="Digite uma mensagem..." aria-label="Escrever mensagem" autocomplete="off">
+            <button type="submit" class="chat-send-btn" aria-label="Enviar mensagem">
+                <span class="material-symbols-outlined" aria-hidden="true">send</span>
+            </button>
+        </form>
+    </div>
+</div>

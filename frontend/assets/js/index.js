@@ -8,6 +8,8 @@ const paginas = {
     'clientes.html': { arquivo: 'pages/clientes.html', titulo: 'OdontoAi - Clientes' },
     'cliente-detalhe.html': { arquivo: 'pages/cliente-detalhe.html', titulo: 'OdontoAi - Ficha do Paciente' },
     'agendamentos.html': { arquivo: 'pages/agendamentos.html', titulo: 'OdontoAi - Agendamentos' },
+    'chat.html': { arquivo: 'pages/chat.html', titulo: 'OdontoAi - Chat' },
+    'configuracoes.html': { arquivo: 'pages/configuracoes.html', titulo: 'OdontoAi - Configurações' },
 };
 
 const conteudo = document.getElementById('conteudo');
@@ -52,6 +54,16 @@ function inicializarPagina(nomePagina) {
         dateInput.valueAsDate = new Date();
     }
 
+    // Nome/cargo do perfil no cabeçalho (existe no Dashboard) — reflete o
+    // que foi salvo em Configurações, sem precisar recarregar a página inteira
+    const nomeHeader = document.getElementById('header-nome-dentista');
+    const cargoHeader = document.getElementById('header-cargo-dentista');
+    if (nomeHeader && cargoHeader && typeof db !== 'undefined') {
+        const perfil = db.getPerfil();
+        nomeHeader.textContent = perfil.nome;
+        cargoHeader.textContent = perfil.cargo;
+    }
+
     // Comportamento específico da tela de Agendamentos (chips de status, data do filtro)
     if (nomePagina === 'agendamentos.html' && typeof iniciarAgendamentos === 'function') {
         iniciarAgendamentos();
@@ -63,6 +75,14 @@ function inicializarPagina(nomePagina) {
 
     if (nomePagina === 'cliente-detalhe.html' && typeof iniciarClienteDetalhe === 'function') {
         iniciarClienteDetalhe();
+    }
+
+    if (nomePagina === 'chat.html' && typeof iniciarChat === 'function') {
+        iniciarChat();
+    }
+
+    if (nomePagina === 'configuracoes.html' && typeof iniciarConfiguracoes === 'function') {
+        iniciarConfiguracoes();
     }
 }
 
@@ -89,6 +109,22 @@ document.addEventListener('click', (evento) => {
 window.addEventListener('popstate', () => {
     carregarPagina(paginaPeloHash(), false);
 });
+
+// -------- Botão "Sair" --------
+// Por enquanto não existe login de verdade ligado a um servidor, então
+// "sair" aqui é simulado: confirma com a pessoa e manda pra tela de login.
+// Quando o backend/autenticação estiverem prontos, aqui entra também a
+// chamada pra invalidar a sessão/token no servidor antes de redirecionar.
+const btnSair = document.getElementById('btn-sair');
+if (btnSair) {
+    btnSair.addEventListener('click', (evento) => {
+        evento.preventDefault();
+        const confirmou = window.confirm('Deseja sair da sua conta?');
+        if (confirmou) {
+            window.location.href = 'login.html';
+        }
+    });
+}
 
 // Primeira carga: respeita o hash da URL (ex: recarregou em #clientes.html), senão abre o Dashboard
 carregarPagina(paginaPeloHash(), false);

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OdontoAi - Login</title>
+
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <script>
+        if (localStorage.getItem('odontoai_dark_mode') === '1') {
+            document.documentElement.classList.add('dark-mode');
+        }
+    </script>
+</head>
+
+<body>
+    <div class="login-page">
+        <form class="card login-card" id="login-form">
+            <div class="logo" style="justify-content: center; margin-bottom: 1.4rem;">
+                <img src="assets/images/OdontoAi_Logo.png" style="width: 3.5rem; height: 3.5rem;">
+                <h2>Odonto<span class="ColorAi">AI</span></h2>
+            </div>
+
+            <div class="campo-form">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" name="email" value="carlos@odontoai.com" required>
+            </div>
+
+            <div class="campo-form">
+                <label for="login-senha">Senha</label>
+                <input type="password" id="login-senha" name="senha" value="123456" required>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 0.6rem;">
+                Entrar
+            </button>
+
+            <p class="text-muted" style="text-align: center; margin-top: 1rem; font-size: 0.75rem;">
+                Login ainda simulado — sem servidor por trás por enquanto.
+            </p>
+        </form>
+    </div>
+
+    <script>
+        // Enquanto não existe backend/autenticação de verdade, qualquer
+        // email/senha preenchidos "entram" — isso é só pra não travar o
+        // fluxo visual. Quando ligarmos a API, aqui vira um fetch('/api/login').
+        document.getElementById('login-form').addEventListener('submit', (evento) => {
+            evento.preventDefault();
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+
+</html>

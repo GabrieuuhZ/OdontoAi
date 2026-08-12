@@ -1,0 +1,74 @@
+<div class="main-header">
+    <div class="greeting">
+        <h1>Configurações</h1>
+        <p>Gerencie seu perfil e preferências</p>
+    </div>
+</div>
+
+<div class="charts-row" style="grid-template-columns: 1fr 1fr; align-items: start;">
+    <!-- MEU PERFIL -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Meu Perfil</h3>
+        </div>
+
+        <div class="paciente-header">
+            <div class="avatar-grande" aria-hidden="true">
+                <span class="material-symbols-outlined">person</span>
+            </div>
+            <div>
+                <h2 id="config-preview-nome" style="margin-bottom: 0.2rem;">Dr. Carlos</h2>
+                <span class="text-muted" id="config-preview-cargo">Cirurgião-Dentista</span>
+            </div>
+        </div>
+
+        <form id="form-perfil">
+            <div class="campo-form">
+                <label for="config-nome">Nome completo</label>
+                <input type="text" id="config-nome" name="nome" required>
+            </div>
+
+            <div class="campo-form">
+                <label for="config-crm">CRM / CRO</label>
+                <input type="text" id="config-crm" name="crm">
+            </div>
+
+            <div class="campo-form">
+                <label for="config-cargo">Cargo / Especialidade</label>
+                <input type="text" id="config-cargo" name="cargo">
+            </div>
+
+            <div class="campo-form">
+                <label for="config-email">Email de login</label>
+                <input type="email" id="config-email" name="email" required>
+            </div>
+
+            <div class="config-form-actions">
+                <button type="submit" class="btn-primary">
+                    <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                    Salvar Alterações
+                </button>
+                <span class="text-muted" id="config-salvo-aviso" hidden>Salvo!</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- APARÊNCIA -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Aparência</h3>
+        </div>
+
+        <div class="config-toggle-row">
+            <div>
+                <h4>Modo escuro</h4>
+                <small class="text-muted">Deixa as telas com fundo escuro, mais confortável à noite</small>
+            </div>
+
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggle-dark-mode" aria-label="Ativar modo escuro">
+                <span class="toggle-slider" aria-hidden="true"></span>
+            </label>
+        </div>
+    </div>
+</div>
