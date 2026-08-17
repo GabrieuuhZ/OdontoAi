@@ -24,7 +24,15 @@
 </head>
 
 <body>
+    <!-- Botão de abrir o menu, só aparece em telas pequenas (ver style.css) -->
+    <button type="button" class="btn-abrir-menu" id="btn-abrir-menu" aria-label="Abrir menu">
+        <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+    </button>
+
     <div class="container"> <!--Barra Lateral-->
+        <!-- Fundo escurecido atrás do menu, quando ele está aberto no mobile -->
+        <div class="menu-overlay" id="menu-overlay"></div>
+
         <aside>
             <div class="top">
                 <div class="logo">
@@ -48,7 +56,7 @@
                     <h3>Clientes</h3>
                 </a>
 
-                <a href="#">
+                <a href="ia.html">
                     <span class="material-symbols-outlined" aria-hidden="true">robot_2</span>
                     <h3>IA</h3>
                 </a>
@@ -88,6 +96,7 @@
     <script src="assets/js/agendamentos.js"></script>
     <script src="assets/js/chat.js"></script>
     <script src="assets/js/configuracoes.js"></script>
+    <script src="assets/js/ia.js"></script>
     <script src="assets/js/index.js"></script>
 </body>
 

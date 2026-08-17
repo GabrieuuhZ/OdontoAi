@@ -1,0 +1,164 @@
+<div class="main-header">
+    <div class="greeting">
+        <h1>IA — Análise de Imagens</h1>
+        <p>Envie radiografias ou fotos para receber uma sugestão de diagnóstico</p>
+    </div>
+
+    <div class="header-actions">
+        <div id="topbar-slot"></div>
+    </div>
+</div>
+
+<div class="charts-row ia-layout">
+    <!-- COLUNA ESQUERDA: FORMULÁRIO -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Nova Análise</h3>
+        </div>
+
+        <div class="ia-consent-banner">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            <p>As sugestões geradas aqui são um apoio à decisão clínica e <b>não substituem o diagnóstico do
+                    dentista</b>. A palavra final sobre qualquer conduta clínica é sempre do profissional
+                responsável.</p>
+        </div>
+
+        <!-- Lista de imagens já enviadas -->
+        <div class="ia-imagens-lista" id="ia-imagens-lista"></div>
+
+        <!-- Dropzone só aparece quando ainda não tem imagem, ou sempre visível pra adicionar mais -->
+        <div class="ia-dropzone" id="ia-dropzone" role="button" tabindex="0" aria-label="Enviar imagens para análise">
+            <span class="material-symbols-outlined" aria-hidden="true">cloud_upload</span>
+            <p>Arraste imagens aqui ou <span class="ia-dropzone-link">clique para escolher</span></p>
+            <small class="text-muted">JPG ou PNG — radiografias ou fotos intraorais, pode selecionar várias</small>
+            <input type="file" id="ia-input-arquivo" accept="image/*" multiple hidden>
+        </div>
+
+        <!-- Busca de paciente -->
+        <div class="ia-campo-paciente" id="ia-campo-paciente">
+            <div class="search-bar" style="min-width: 0; margin-top: 1.4rem;">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input type="text" id="ia-busca-paciente" placeholder="Buscar paciente por nome, CPF ou ID..."
+                    aria-label="Buscar paciente" autocomplete="off">
+            </div>
+            <ul class="ia-busca-resultados" id="ia-busca-resultados" hidden></ul>
+        </div>
+
+        <!-- Card do paciente selecionado (substitui a busca quando escolhido) -->
+        <div class="ia-paciente-card" id="ia-paciente-card" hidden></div>
+
+        <!-- Consentimento LGPD -->
+        <div class="ia-consentimento-linha">
+            <label class="ia-checkbox-label">
+                <input type="checkbox" id="ia-consentimento">
+                <span class="ia-checkbox-visual" aria-hidden="true">
+                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                </span>
+                <span>Confirmo que tenho autorização para processar esta imagem com auxílio de inteligência
+                    artificial, conforme a
+                    <a href="https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm" target="_blank" rel="noopener noreferrer"
+                        class="ia-link-lgpd">LGPD</a>.</span>
+            </label>
+        </div>
+
+        <div class="config-form-actions">
+            <button class="btn-primary" type="button" id="ia-btn-analisar" disabled>
+                <span class="material-symbols-outlined ia-icone-normal" aria-hidden="true">neurology</span>
+                <span class="material-symbols-outlined ia-icone-carregando" aria-hidden="true" hidden>progress_activity</span>
+                <span id="ia-btn-analisar-texto">Analisar Imagens</span>
+            </button>
+        </div>
+        <small class="text-muted" id="ia-status-analisando" hidden>Isso pode levar alguns segundos.</small>
+    </div>
+
+    <!-- COLUNA DIREITA: "COMO FUNCIONA" (antes) OU RESULTADO (depois) -->
+    <div>
+        <div class="card ia-como-funciona" id="ia-como-funciona">
+            <div class="card-header">
+                <h3>Como funciona</h3>
+            </div>
+            <ol class="ia-passos">
+                <li>
+                    <span class="ia-passo-numero">1</span>
+                    <div>
+                        <h4>Envio da imagem</h4>
+                        <p>Você envia a radiografia ou foto.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="ia-passo-numero">2</span>
+                    <div>
+                        <h4>Análise pela IA</h4>
+                        <p>Nosso modelo analisa padrões relevantes.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="ia-passo-numero">3</span>
+                    <div>
+                        <h4>Sugestão de achados</h4>
+                        <p>Você revisa e decide a conduta clínica.</p>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <div class="card" id="ia-resultado-card" hidden>
+            <div class="card-header">
+                <h3>Resultado da Análise</h3>
+            </div>
+
+            <div id="ia-print-area">
+                <div class="ia-consent-banner ia-consent-banner-resultado">
+                    <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                    <p><b>Sugestão gerada por Inteligência Artificial.</b> O diagnóstico final e a conduta clínica
+                        são de responsabilidade exclusiva do dentista responsável.</p>
+                </div>
+
+                <div id="ia-resultado-meta" class="text-muted" style="margin-bottom: 1rem;"></div>
+
+                <ul class="ia-achados-lista" id="ia-achados-lista"></ul>
+
+                <div class="ia-observacoes">
+                    <h4>Observações</h4>
+                    <p id="ia-observacoes-texto"></p>
+                    <small class="text-muted">Lembre-se: isso não é um diagnóstico definitivo.</small>
+                </div>
+            </div>
+
+            <div class="config-form-actions" style="margin-top: 1.2rem; flex-wrap: wrap;">
+                <button class="btn-primary" type="button" id="ia-btn-salvar-ficha" disabled>
+                    <span class="material-symbols-outlined" aria-hidden="true" style="font-size: 1.1rem; vertical-align: middle;">link</span>
+                    Vincular ao Paciente
+                </button>
+                <button class="btn-secundario" type="button" id="ia-btn-pdf">
+                    <span class="material-symbols-outlined" aria-hidden="true" style="font-size: 1.1rem; vertical-align: middle;">print</span>
+                    Baixar / Imprimir PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HISTÓRICO -->
+<div class="card table-card" style="margin-top: 1.4rem;">
+    <div class="card-header">
+        <h3>Histórico de Análises</h3>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Paciente</th>
+                <th>Imagens</th>
+                <th>Achados</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="ia-historico-tbody">
+            <tr>
+                <td colspan="6" class="text-muted">Nenhuma análise feita ainda nesta sessão.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

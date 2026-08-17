@@ -5,50 +5,12 @@
 // por chamadas fetch() — o resto do código (telas) não muda.
 
 const SEED_PACIENTES = [
-    { id: 1, nome: 'Maria Silva', cpf: '123.456.789-00', telefone: '(11) 98765-4321', email: 'maria.silva@email.com', nascimento: '14/03/1988', endereco: 'Rua das Flores, 123 - São Paulo, SP', convenio: 'Particular', ultimaConsulta: '18/06/2025', proximaConsulta: '25/06/2025', status: 'ativo' },
-    { id: 2, nome: 'Pedro Oliveira', cpf: '234.567.890-11', telefone: '(11) 91234-5678', email: 'pedro.oliveira@email.com', nascimento: '02/07/1979', endereco: 'Av. Paulista, 900 - São Paulo, SP', convenio: 'OdontoPrev', ultimaConsulta: '17/06/2025', proximaConsulta: '—', status: 'ativo' },
-    { id: 3, nome: 'Ana Costa', cpf: '345.678.901-22', telefone: '(11) 99876-5432', email: 'ana.costa@email.com', nascimento: '30/11/1995', endereco: 'Rua Augusta, 455 - São Paulo, SP', convenio: 'Particular', ultimaConsulta: '10/06/2025', proximaConsulta: '19/06/2025', status: 'ativo' },
-    { id: 4, nome: 'Lucas Martins', cpf: '456.789.012-33', telefone: '(11) 98888-1122', email: 'lucas.martins@email.com', nascimento: '18/09/1990', endereco: 'Rua Oscar Freire, 210 - São Paulo, SP', convenio: 'Amil Dental', ultimaConsulta: '02/03/2025', proximaConsulta: '—', status: 'inativo' },
-    { id: 5, nome: 'Juliana Santos', cpf: '567.890.123-44', telefone: '(11) 97777-3344', email: 'juliana.santos@email.com', nascimento: '25/05/2001', endereco: 'Rua Consolação, 780 - São Paulo, SP', convenio: 'Particular', ultimaConsulta: '15/06/2025', proximaConsulta: '19/06/2025', status: 'ativo' },
+    { id: 1, nome: 'Maria Silva', cpf: '123.456.789-00', telefone: '(11) 98765-4321', ultimaConsulta: '18/06/2025', proximaConsulta: '25/06/2025', status: 'ativo' },
+    { id: 2, nome: 'Pedro Oliveira', cpf: '234.567.890-11', telefone: '(11) 91234-5678', ultimaConsulta: '17/06/2025', proximaConsulta: '—', status: 'ativo' },
+    { id: 3, nome: 'Ana Costa', cpf: '345.678.901-22', telefone: '(11) 99876-5432', ultimaConsulta: '10/06/2025', proximaConsulta: '19/06/2025', status: 'ativo' },
+    { id: 4, nome: 'Lucas Martins', cpf: '456.789.012-33', telefone: '(11) 98888-1122', ultimaConsulta: '02/03/2025', proximaConsulta: '—', status: 'inativo' },
+    { id: 5, nome: 'Juliana Santos', cpf: '567.890.123-44', telefone: '(11) 97777-3344', ultimaConsulta: '15/06/2025', proximaConsulta: '19/06/2025', status: 'ativo' },
 ];
-
-// Histórico de consultas por paciente (chave = id do paciente).
-// Diferente de SEED_AGENDAMENTOS (que só tem os agendamentos de "hoje"),
-// isso guarda o histórico ao longo do tempo, usado na Ficha do Paciente.
-const SEED_HISTORICO_CONSULTAS = {
-    1: [
-        { data: '25/06/2025', dentista: 'Dr. Carlos', procedimento: 'Limpeza Dental', status: 'agendado' },
-        { data: '18/06/2025', dentista: 'Dr. Carlos', procedimento: 'Limpeza Dental', status: 'concluido' },
-        { data: '02/04/2025', dentista: 'Dra. Julia', procedimento: 'Restauração', status: 'concluido' },
-        { data: '15/01/2025', dentista: 'Dr. Carlos', procedimento: 'Avaliação', status: 'faltou' },
-    ],
-    2: [
-        { data: '17/06/2025', dentista: 'Dr. Carlos', procedimento: 'Clareamento', status: 'concluido' },
-        { data: '20/03/2025', dentista: 'Dr. Carlos', procedimento: 'Avaliação', status: 'concluido' },
-    ],
-    3: [
-        { data: '19/06/2025', dentista: 'Dra. Julia', procedimento: 'Restauração', status: 'agendado' },
-        { data: '10/06/2025', dentista: 'Dra. Julia', procedimento: 'Restauração', status: 'concluido' },
-        { data: '02/01/2025', dentista: 'Dra. Julia', procedimento: 'Limpeza Dental', status: 'concluido' },
-    ],
-    4: [
-        { data: '02/03/2025', dentista: 'Dr. Carlos', procedimento: 'Avaliação', status: 'cancelado' },
-    ],
-    5: [
-        { data: '19/06/2025', dentista: 'Dra. Julia', procedimento: 'Canal', status: 'agendado' },
-        { data: '15/06/2025', dentista: 'Dra. Julia', procedimento: 'Canal', status: 'concluido' },
-    ],
-};
-
-// Diagnósticos/observações "de exemplo" (a IA e os dentistas também podem
-// adicionar mais, via db.salvarDiagnosticoPaciente — ficam somados a isso)
-const SEED_DIAGNOSTICOS = {
-    1: [
-        { data: '18/06/2025', titulo: 'Limpeza de rotina', texto: 'Sem alterações. Recomendado retorno em 6 meses.' },
-        { data: '02/04/2025', titulo: 'Restauração no dente 26', texto: 'Cárie tratada com resina composta. Sem intercorrências.' },
-        { data: '10/01/2025', titulo: 'Avaliação inicial', texto: 'Paciente relatou sensibilidade no dente 26. Encaminhada para restauração.' },
-    ],
-};
 
 const SEED_AGENDAMENTOS = [
     { id: 1, horario: '08:00', paciente: 'Maria Silva', dentista: 'Dr. Carlos', procedimento: 'Limpeza Dental', status: 'confirmado' },
@@ -183,18 +145,14 @@ const db = {
     // salvo aqui fica guardado certinho, mas só vai *aparecer* visualmente
     // na ficha quando aquela tela também passar a carregar dados por paciente.
     getDiagnosticosPaciente(pacienteId) {
-        const todos = carregar('odontoai_diagnosticos', SEED_DIAGNOSTICOS);
+        const todos = carregar('odontoai_diagnosticos', {});
         return todos[pacienteId] || [];
     },
     salvarDiagnosticoPaciente(pacienteId, diagnostico) {
-        const todos = carregar('odontoai_diagnosticos', SEED_DIAGNOSTICOS);
+        const todos = carregar('odontoai_diagnosticos', {});
         if (!todos[pacienteId]) todos[pacienteId] = [];
         todos[pacienteId].unshift(diagnostico);
         localStorage.setItem('odontoai_diagnosticos', JSON.stringify(todos));
-    },
-    getHistoricoConsultas(pacienteId) {
-        const todos = carregar('odontoai_historico_consultas', SEED_HISTORICO_CONSULTAS);
-        return todos[pacienteId] || [];
     },
     proximoId(lista) {
         return lista.length ? Math.max(...lista.map((item) => item.id)) + 1 : 1;

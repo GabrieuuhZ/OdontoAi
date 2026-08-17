@@ -38,7 +38,7 @@ function renderizarTabelaPacientes() {
             <td><span class="status ${paciente.status}">${paciente.status === 'ativo' ? 'Ativo' : 'Inativo'}</span></td>
             <td>
                 <div class="row-actions">
-                    <a class="icon-btn" href="cliente-detalhe.html?id=${paciente.id}" aria-label="Ver ficha de ${paciente.nome}">
+                    <a class="icon-btn" href="cliente-detalhe.html" aria-label="Ver ficha de ${paciente.nome}">
                         <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                     </a>
                     <span class="icon-btn" role="button" tabindex="0" data-editar-paciente="${paciente.id}" aria-label="Editar ${paciente.nome}">

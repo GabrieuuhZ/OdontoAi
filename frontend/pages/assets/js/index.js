@@ -14,16 +14,8 @@ const paginas = {
 };
 
 const conteudo = document.getElementById('conteudo');
-let paginaAtualQuery = ''; // guarda o "?id=5" (se houver) da página carregada agora
 
-// Lê um parâmetro da URL da página atual (ex: obterParametroDaURL('id') → "5")
-function obterParametroDaURL(nome) {
-    return new URLSearchParams(paginaAtualQuery).get(nome);
-}
-window.obterParametroDaURL = obterParametroDaURL;
-
-async function carregarPagina(nomePaginaComQuery, atualizarHistorico = true) {
-    const [nomePagina, query] = nomePaginaComQuery.split('?');
+async function carregarPagina(nomePagina, atualizarHistorico = true) {
     const pagina = paginas[nomePagina];
     if (!pagina || !conteudo) return;
 
@@ -37,14 +29,13 @@ async function carregarPagina(nomePaginaComQuery, atualizarHistorico = true) {
         return;
     }
 
-    paginaAtualQuery = query || '';
     document.title = pagina.titulo;
     marcarLinkAtivo(nomePagina);
     inicializarPagina(nomePagina);
     conteudo.scrollTop = 0;
 
     if (atualizarHistorico) {
-        history.pushState({ pagina: nomePaginaComQuery }, '', '#' + nomePaginaComQuery);
+        history.pushState({ pagina: nomePagina }, '', '#' + nomePagina);
     }
 }
 
@@ -147,8 +138,7 @@ function inserirTopbarNaPagina() {
 
 function paginaPeloHash() {
     const hash = window.location.hash.replace('#', '');
-    const [base] = hash.split('?');
-    return paginas[base] ? hash : 'index.html';
+    return paginas[hash] ? hash : 'index.html';
 }
 
 // Qualquer clique em link interno (menu lateral ou dentro do conteúdo,
@@ -159,8 +149,7 @@ document.addEventListener('click', (evento) => {
     if (!link) return;
 
     const href = link.getAttribute('href');
-    const [base] = href.split('?');
-    if (!paginas[base]) return;
+    if (!paginas[href]) return;
 
     evento.preventDefault();
     carregarPagina(href);
@@ -169,29 +158,6 @@ document.addEventListener('click', (evento) => {
 // Botão voltar/avançar do navegador
 window.addEventListener('popstate', () => {
     carregarPagina(paginaPeloHash(), false);
-});
-
-// -------- Menu mobile (abrir/fechar a "gaveta") --------
-const containerEl = document.querySelector('.container');
-const btnAbrirMenu = document.getElementById('btn-abrir-menu');
-const btnFecharMenu = document.getElementById('close-btn');
-const menuOverlay = document.getElementById('menu-overlay');
-
-function abrirMenuMobile() {
-    containerEl?.classList.add('menu-aberto');
-}
-function fecharMenuMobile() {
-    containerEl?.classList.remove('menu-aberto');
-}
-
-btnAbrirMenu?.addEventListener('click', abrirMenuMobile);
-btnFecharMenu?.addEventListener('click', fecharMenuMobile);
-menuOverlay?.addEventListener('click', fecharMenuMobile);
-
-// Fecha o menu automaticamente ao escolher uma página (senão ficaria
-// aberto por cima do conteúdo novo que acabou de carregar)
-document.querySelectorAll('.sidebar a').forEach((link) => {
-    link.addEventListener('click', fecharMenuMobile);
 });
 
 // -------- Botão "Sair" --------
