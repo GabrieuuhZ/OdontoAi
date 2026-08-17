@@ -293,8 +293,8 @@ function analisarImagensIA() {
 }
 
 function gerarObservacoesIA(achados) {
-    const partes = achados.map((item) => `sinais compatíveis com "${item.achado.toLowerCase()}" em ${item.dente.toLowerCase()}`);
-    return `A análise identificou ${partes.join('; ')}.`;
+    const partes = achados.map((item) => `${item.achado.toLowerCase()} (${item.dente.toLowerCase()})`);
+    return `A análise apontou os seguintes achados, que precisam ser confirmados pelo dentista responsável: ${partes.join('; ')}.`;
 }
 
 function renderizarResultadoIA(analise) {
@@ -342,11 +342,23 @@ function salvarAnaliseNaFichaIA() {
         .map((item) => `${item.dente}: ${item.achado} (${item.confianca}%)`)
         .join(' · ');
 
+    const perfil = typeof db !== 'undefined' && db.getPerfil ? db.getPerfil() : null;
+
     db.salvarDiagnosticoPaciente(iaUltimaAnalise.pacienteId, {
         data: `${iaUltimaAnalise.data} — Gerado por IA`,
         titulo: 'Sugestão de análise de imagem (IA)',
         texto: resumoAchados,
         geradoPorIA: true,
+        // Campos de rastreabilidade: o professor pediu pra guardar o que a
+        // IA gerou originalmente separado do que o dentista aprovou/mudou.
+        // Hoje "Vincular ao Paciente" é, na prática, o dentista aprovando
+        // o achado como está (ainda não existe uma etapa de edição antes
+        // de salvar) — então já registramos isso, pra quando o backend e
+        // uma tela de revisão existirem, o dado antigo já estar no formato certo.
+        textoOriginalIA: resumoAchados,
+        aprovadoPeloDentista: true,
+        aprovadoPor: perfil ? perfil.nome : null,
+        aprovadoEm: new Date().toLocaleString('pt-BR'),
     });
 
     const btnSalvarFicha = document.getElementById('ia-btn-salvar-ficha');

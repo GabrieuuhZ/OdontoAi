@@ -125,13 +125,29 @@ const SEED_ANALISES = [];
 // "Banco" de possíveis achados que a análise (simulada) pode sortear.
 // Quando ligarmos numa IA de verdade, isso é substituído pela resposta real
 // do modelo — o resto da tela (renderização, PDF, salvar na ficha) não muda.
+// Lista de possíveis achados que a análise (simulada) sorteia.
+// Reduzida às 3 categorias que o professor recomendou como MVP inicial:
+// cárie, siso impactado e lesão periapical — em vez de tentar cobrir
+// endodontia, periodontia, fraturas, cistos, tumores etc. de uma vez.
+// Quando ligarmos numa IA de verdade, essa lista deixa de existir — o
+// modelo real vai devolver os achados, no mesmo formato (dente, achado,
+// confiança), então o resto da tela não precisa mudar.
+//
+// Cuidado de linguagem (também pedido pelo professor): sempre "achado
+// sugestivo de..." ou "possível...", nunca afirmando o diagnóstico nem
+// sugerindo a conduta (ex: nunca "necessita canal", sempre "sugestivo de
+// lesão periapical, indicada avaliação").
 const ACHADOS_POSSIVEIS = [
-    { dente: 'Dente 26', achado: 'Possível cárie oclusal', confianca: 78 },
-    { dente: 'Dente 36', achado: 'Sinal de desgaste dentário', confianca: 64 },
-    { dente: 'Dente 11', achado: 'Sem alterações aparentes', confianca: 92 },
-    { dente: 'Dente 47', achado: 'Possível início de doença periodontal', confianca: 55 },
-    { dente: 'Dente 24', achado: 'Restauração antiga com possível infiltração', confianca: 70 },
-    { dente: 'Dente 16', achado: 'Possível impactação do terceiro molar', confianca: 66 },
+    // Cárie
+    { dente: 'Dente 26', achado: 'Achado sugestivo de cárie oclusal', confianca: 78 },
+    { dente: 'Dente 36', achado: 'Achado sugestivo de cárie interproximal', confianca: 71 },
+    { dente: 'Dente 11', achado: 'Sem sinais sugestivos de cárie nesta imagem', confianca: 92 },
+    // Siso impactado
+    { dente: 'Dente 38 (siso)', achado: 'Possível impactação do terceiro molar', confianca: 66 },
+    { dente: 'Dente 48 (siso)', achado: 'Possível posicionamento horizontal do terceiro molar', confianca: 60 },
+    // Lesão periapical
+    { dente: 'Dente 46', achado: 'Área radiolúcida sugestiva de lesão periapical', confianca: 58 },
+    { dente: 'Dente 21', achado: 'Sem sinais sugestivos de lesão periapical nesta imagem', confianca: 89 },
 ];
 
 function carregar(chave, seed) {
