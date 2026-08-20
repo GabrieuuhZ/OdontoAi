@@ -76,3 +76,38 @@
         </div>
     </div>
 </div>
+
+<!-- DADOS DA CLÍNICA (aparecem no cabeçalho de PDFs, como a receita) -->
+<div class="card" style="margin-top: 1.4rem;">
+    <div class="card-header">
+        <h3>Dados da Clínica</h3>
+    </div>
+    <p class="text-muted" style="margin-bottom: 1rem;">Usados no cabeçalho de documentos gerados, como receitas e laudos em PDF.</p>
+
+    <form id="form-clinica">
+        <div class="dados-grid">
+            <div class="campo-form">
+                <label for="config-clinica-nome">Nome da clínica</label>
+                <input type="text" id="config-clinica-nome" name="nome" required>
+            </div>
+
+            <div class="campo-form">
+                <label for="config-clinica-telefone">Telefone</label>
+                <input type="text" id="config-clinica-telefone" name="telefone">
+            </div>
+
+            <div class="campo-form" style="grid-column: 1 / -1;">
+                <label for="config-clinica-endereco">Endereço</label>
+                <input type="text" id="config-clinica-endereco" name="endereco">
+            </div>
+        </div>
+
+        <div class="config-form-actions">
+            <button type="submit" class="btn-primary">
+                <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                Salvar Dados da Clínica
+            </button>
+            <span class="text-muted" id="config-clinica-salvo-aviso" hidden>Salvo!</span>
+        </div>
+    </form>
+</div>

@@ -62,12 +62,13 @@
         </div>
 
         <div class="config-form-actions">
-            <button class="btn-primary" type="button" id="ia-btn-analisar" disabled>
+            <button class="btn-primary" type="button" id="ia-btn-analisar">
                 <span class="material-symbols-outlined ia-icone-normal" aria-hidden="true">neurology</span>
                 <span class="material-symbols-outlined ia-icone-carregando" aria-hidden="true" hidden>progress_activity</span>
                 <span id="ia-btn-analisar-texto">Analisar Imagens</span>
             </button>
         </div>
+        <small class="ia-erro-validacao" id="ia-erro-analise" hidden></small>
         <small class="text-muted" id="ia-status-analisando" hidden>Isso pode levar alguns segundos.</small>
     </div>
 
@@ -119,9 +120,26 @@
                 <ul class="ia-achados-lista" id="ia-achados-lista"></ul>
 
                 <div class="ia-observacoes">
-                    <h4>Observações</h4>
+                    <h4>Observações da IA</h4>
                     <p id="ia-observacoes-texto"></p>
                     <small class="text-muted">Lembre-se: isso não é um diagnóstico definitivo.</small>
+                </div>
+
+                <!-- Diagnóstico escrito pelo dentista (fica junto no PDF e na ficha do paciente) -->
+                <div class="ia-diagnostico-dentista">
+                    <h4>Diagnóstico do Dentista</h4>
+                    <p class="text-muted ia-somente-tela" style="margin-bottom: 0.6rem;">
+                        Escreva aqui sua avaliação — considerando (ou não) a sugestão da IA acima. Isso entra no PDF e fica salvo na ficha do paciente.
+                    </p>
+                    <textarea id="ia-diagnostico-texto" rows="4"
+                        placeholder="Ex: Confirmado achado sugestivo de cárie no dente 26. Indicada restauração na próxima consulta."></textarea>
+                </div>
+
+                <!-- Assinatura — só aparece de fato no PDF impresso -->
+                <div class="ia-assinatura">
+                    <div class="ia-assinatura-linha"></div>
+                    <p><b id="ia-assinatura-nome"></b> — <span id="ia-assinatura-crm"></span></p>
+                    <small class="text-muted" id="ia-assinatura-data"></small>
                 </div>
             </div>
 

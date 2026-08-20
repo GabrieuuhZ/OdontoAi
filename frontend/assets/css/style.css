@@ -58,6 +58,20 @@
     box-sizing: border-box;
 }
 
+/*
+   Correção definitiva de um bug que já apareceu 2 vezes no projeto:
+   qualquer elemento que tenha "display" definido por uma classe (como
+   .material-symbols-outlined ou .ia-paciente-card) "empata" em
+   especificidade CSS com a regra nativa [hidden] { display: none } do
+   navegador — e nesse empate, a nossa regra ganha, então marcar
+   `elemento.hidden = true` no JavaScript não escondia nada de verdade.
+   Esse !important garante que [hidden] SEMPRE vence, não importa
+   quantas classes de display o elemento tenha.
+*/
+[hidden] {
+    display: none !important;
+}
+
 html {
     font-size: 15px;
 }
@@ -1326,7 +1340,8 @@ button:focus-visible {
 }
 
 .campo-form input,
-.campo-form select {
+.campo-form select,
+.campo-form textarea {
     font-family: inherit;
     font-size: 0.86rem;
     color: var(--color-dark);
@@ -1336,8 +1351,15 @@ button:focus-visible {
     padding: 0.6rem 0.8rem;
 }
 
+.campo-form textarea {
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+}
+
 .campo-form input:focus,
-.campo-form select:focus {
+.campo-form select:focus,
+.campo-form textarea:focus {
     border-color: var(--color-primary);
 }
 
@@ -2046,5 +2068,123 @@ button:focus-visible {
     body.print-ia #ia-resultado-card {
         box-shadow: none;
         padding: 0;
+    }
+}
+
+/* ============ PARTE 1 — Mensagem de validação (IA) ============ */
+
+.ia-erro-validacao {
+    display: block;
+    color: var(--color-danger);
+    font-size: 0.78rem;
+    margin-top: 0.6rem;
+}
+
+/* ============ PARTE 2 — Diagnóstico do dentista + assinatura (IA) ============ */
+
+.ia-diagnostico-dentista {
+    margin-top: 1.4rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--color-info-light);
+}
+
+.ia-diagnostico-dentista h4 {
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+}
+
+.ia-diagnostico-dentista textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: 0.86rem;
+    color: var(--color-dark);
+    background: var(--color-background2);
+    border: 1px solid var(--color-info-light);
+    border-radius: var(--border-radius-1);
+    padding: 0.7rem 0.9rem;
+    resize: vertical;
+}
+
+.ia-diagnostico-dentista textarea:focus {
+    border-color: var(--color-primary);
+}
+
+.ia-assinatura {
+    margin-top: 2.2rem;
+    max-width: 20rem;
+}
+
+.ia-assinatura-linha {
+    border-top: 1px solid var(--color-dark);
+    margin-bottom: 0.4rem;
+}
+
+.ia-assinatura p {
+    color: var(--color-dark);
+    font-size: 0.82rem;
+}
+
+/* ============ PARTE 3 — Receita (Clientes) ============ */
+
+.receita-print-area {
+    display: none;
+}
+
+@media print {
+    body.print-receita .container {
+        display: none;
+    }
+    body.print-receita .receita-print-area {
+        display: block;
+        padding: 2rem;
+        color: #000;
+    }
+}
+
+.receita-cabecalho {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 1rem;
+    margin-bottom: 1.4rem;
+}
+
+.receita-cabecalho h2 {
+    margin-bottom: 0.2rem;
+}
+
+.receita-titulo {
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.4rem;
+}
+
+.receita-dados-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem 1.4rem;
+    margin-bottom: 1.6rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid #999;
+}
+
+.receita-dados-grid label {
+    display: block;
+    font-size: 0.72rem;
+    color: #555;
+}
+
+.receita-corpo {
+    min-height: 12rem;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+    white-space: pre-wrap;
+}
+
+/* Em telas de impressão em geral: instrução que só faz sentido na tela
+   (não deve aparecer no papel) */
+@media print {
+    .ia-somente-tela {
+        display: none !important;
     }
 }

@@ -21,7 +21,6 @@ function iniciarIA() {
     document.getElementById('ia-campo-paciente').hidden = false;
 
     renderizarImagensIA();
-    renderizarHistoricoIA();
 
     const dropzone = document.getElementById('ia-dropzone');
     const inputArquivo = document.getElementById('ia-input-arquivo');
@@ -84,12 +83,42 @@ function iniciarIA() {
     btnAnalisar.addEventListener('click', analisarImagensIA);
 
     document.getElementById('ia-btn-pdf').addEventListener('click', () => {
+        // Se o dentista escreveu algo antes de imprimir, guarda também
+        // (mesmo que ele não tenha vinculado a um paciente ainda)
+        if (iaUltimaAnalise) {
+            const texto = document.getElementById('ia-diagnostico-texto')?.value.trim() || '';
+            iaUltimaAnalise.diagnosticoDentista = texto;
+            const analises = db.getAnalises();
+            const indice = analises.findIndex((a) => a.id === iaUltimaAnalise.id);
+            if (indice !== -1) {
+                analises[indice].diagnosticoDentista = texto;
+                db.salvarAnalises(analises);
+            }
+        }
+
         document.body.classList.add('print-ia');
         window.print();
         setTimeout(() => document.body.classList.remove('print-ia'), 500);
     });
 
     document.getElementById('ia-btn-salvar-ficha').addEventListener('click', salvarAnaliseNaFichaIA);
+
+    atualizarBotaoAnalisarIA();
+
+    // Isso fica por último, e protegido: se sobrou algum registro de uma
+    // versão antiga do app no localStorage (formato diferente do atual),
+    // isso NUNCA pode impedir o resto da página (botão, busca de paciente)
+    // de funcionar. Por isso vem depois de todos os addEventListener acima,
+    // e dentro de um try/catch.
+    try {
+        renderizarHistoricoIA();
+    } catch (erro) {
+        console.error('Não foi possível carregar o histórico de análises (dado antigo incompatível?):', erro);
+        const tbody = document.getElementById('ia-historico-tbody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Não foi possível carregar o histórico. Tente limpar os dados de teste em Configurações.</td></tr>';
+        }
+    }
 }
 
 // -------- Upload de imagens --------
@@ -151,11 +180,22 @@ function renderizarImagensIA() {
 }
 
 function atualizarBotaoAnalisarIA() {
-    const btnAnalisar = document.getElementById('ia-btn-analisar');
-    const checkboxConsentimento = document.getElementById('ia-consentimento');
-    if (!btnAnalisar || !checkboxConsentimento) return;
+    // O botão fica sempre clicável — se faltar algo, mostramos uma
+    // mensagem explicando o que falta (em vez de só desabilitar sem dizer
+    // por quê, que é o que confundia antes).
+    esconderErroAnaliseIA();
+}
 
-    btnAnalisar.disabled = iaImagensSelecionadas.length === 0 || !checkboxConsentimento.checked;
+function mostrarErroAnaliseIA(mensagem) {
+    const erroEl = document.getElementById('ia-erro-analise');
+    if (!erroEl) return;
+    erroEl.textContent = mensagem;
+    erroEl.hidden = false;
+}
+
+function esconderErroAnaliseIA() {
+    const erroEl = document.getElementById('ia-erro-analise');
+    if (erroEl) erroEl.hidden = true;
 }
 
 // -------- Busca e seleção de paciente --------
@@ -239,6 +279,20 @@ function renderizarPacienteSelecionadoIA() {
 // -------- Análise (simulada) --------
 
 function analisarImagensIA() {
+    esconderErroAnaliseIA();
+
+    if (iaImagensSelecionadas.length === 0) {
+        mostrarErroAnaliseIA('Envie ao menos uma imagem antes de analisar.');
+        return;
+    }
+
+    const checkboxConsentimento = document.getElementById('ia-consentimento');
+    if (!checkboxConsentimento.checked) {
+        mostrarErroAnaliseIA('Aceite os termos de consentimento abaixo antes de gerar o diagnóstico.');
+        checkboxConsentimento.focus();
+        return;
+    }
+
     const btnAnalisar = document.getElementById('ia-btn-analisar');
     const statusEl = document.getElementById('ia-status-analisando');
     const iconeNormal = btnAnalisar.querySelector('.ia-icone-normal');
@@ -268,6 +322,7 @@ function analisarImagensIA() {
                 pacienteNome: iaPacienteSelecionado ? iaPacienteSelecionado.nome : null,
                 quantidadeImagens: iaImagensSelecionadas.length,
                 achados: achadosSorteados,
+                diagnosticoDentista: '',
             };
 
             const analises = db.getAnalises();
@@ -325,6 +380,19 @@ function renderizarResultadoIA(analise) {
 
     observacoesEl.textContent = gerarObservacoesIA(analise.achados);
 
+    // Diagnóstico escrito pelo dentista: mantém o que já tinha sido escrito
+    // (se estiver reabrindo do histórico), ou começa em branco pra análise nova
+    const textareaDiagnostico = document.getElementById('ia-diagnostico-texto');
+    if (textareaDiagnostico) {
+        textareaDiagnostico.value = analise.diagnosticoDentista || '';
+    }
+
+    // Assinatura: sempre reflete o profissional logado agora
+    const perfil = typeof db !== 'undefined' && db.getPerfil ? db.getPerfil() : null;
+    document.getElementById('ia-assinatura-nome').textContent = perfil ? perfil.nome : '';
+    document.getElementById('ia-assinatura-crm').textContent = perfil ? perfil.crm : '';
+    document.getElementById('ia-assinatura-data').textContent = `Emitido em ${analise.data} às ${analise.hora}`;
+
     btnSalvarFicha.disabled = !analise.pacienteId;
     btnSalvarFicha.innerHTML = analise.pacienteId
         ? '<span class="material-symbols-outlined" aria-hidden="true" style="font-size:1.1rem; vertical-align:middle;">link</span> Vincular ao Paciente'
@@ -342,20 +410,32 @@ function salvarAnaliseNaFichaIA() {
         .map((item) => `${item.dente}: ${item.achado} (${item.confianca}%)`)
         .join(' · ');
 
+    const diagnosticoDentista = document.getElementById('ia-diagnostico-texto')?.value.trim() || '';
     const perfil = typeof db !== 'undefined' && db.getPerfil ? db.getPerfil() : null;
+
+    // Guarda o que o dentista escreveu de volta na própria análise (pra
+    // não se perder se reabrir essa análise pelo histórico depois)
+    iaUltimaAnalise.diagnosticoDentista = diagnosticoDentista;
+    const analises = db.getAnalises();
+    const indice = analises.findIndex((a) => a.id === iaUltimaAnalise.id);
+    if (indice !== -1) {
+        analises[indice].diagnosticoDentista = diagnosticoDentista;
+        db.salvarAnalises(analises);
+    }
+
+    const textoCompleto = diagnosticoDentista
+        ? `Achados da IA: ${resumoAchados}\n\nDiagnóstico do dentista: ${diagnosticoDentista}`
+        : `Achados da IA: ${resumoAchados}`;
 
     db.salvarDiagnosticoPaciente(iaUltimaAnalise.pacienteId, {
         data: `${iaUltimaAnalise.data} — Gerado por IA`,
         titulo: 'Sugestão de análise de imagem (IA)',
-        texto: resumoAchados,
+        texto: textoCompleto,
         geradoPorIA: true,
         // Campos de rastreabilidade: o professor pediu pra guardar o que a
         // IA gerou originalmente separado do que o dentista aprovou/mudou.
-        // Hoje "Vincular ao Paciente" é, na prática, o dentista aprovando
-        // o achado como está (ainda não existe uma etapa de edição antes
-        // de salvar) — então já registramos isso, pra quando o backend e
-        // uma tela de revisão existirem, o dado antigo já estar no formato certo.
         textoOriginalIA: resumoAchados,
+        diagnosticoDentista,
         aprovadoPeloDentista: true,
         aprovadoPor: perfil ? perfil.nome : null,
         aprovadoEm: new Date().toLocaleString('pt-BR'),
@@ -373,7 +453,10 @@ function renderizarHistoricoIA() {
     const tbody = document.getElementById('ia-historico-tbody');
     if (!tbody) return;
 
-    const analises = db.getAnalises();
+    // Filtra qualquer registro que não tenha o formato esperado (pode ter
+    // sobrado do localStorage de uma versão antiga do app) — assim um
+    // registro incompatível não derruba a lista inteira.
+    const analises = db.getAnalises().filter((a) => a && Array.isArray(a.achados));
 
     if (analises.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Nenhuma análise feita ainda nesta sessão.</td></tr>';

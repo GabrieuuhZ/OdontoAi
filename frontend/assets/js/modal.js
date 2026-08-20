@@ -64,7 +64,7 @@ function fecharModal() {
 }
 
 // Pequeno helper pra deixar a montagem dos campos mais legível nas outras telas
-function campoForm({ label, name, tipo = 'text', valor = '', obrigatorio = false, opcoes = null }) {
+function campoForm({ label, name, tipo = 'text', valor = '', obrigatorio = false, opcoes = null, linhas = 4 }) {
     const idCampo = `campo-${name}`;
     const req = obrigatorio ? 'required' : '';
 
@@ -81,6 +81,15 @@ function campoForm({ label, name, tipo = 'text', valor = '', obrigatorio = false
             <div class="campo-form">
                 <label for="${idCampo}">${label}</label>
                 <select id="${idCampo}" name="${name}" ${req}>${options}</select>
+            </div>
+        `;
+    }
+
+    if (tipo === 'textarea') {
+        return `
+            <div class="campo-form">
+                <label for="${idCampo}">${label}</label>
+                <textarea id="${idCampo}" name="${name}" rows="${linhas}" ${req}>${valor}</textarea>
             </div>
         `;
     }

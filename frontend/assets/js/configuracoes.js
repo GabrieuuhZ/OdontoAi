@@ -28,6 +28,35 @@ function iniciarConfiguracoes() {
             aplicarModoEscuro(toggle.checked);
         });
     }
+
+    const clinica = db.getClinica();
+    document.getElementById('config-clinica-nome').value = clinica.nome;
+    document.getElementById('config-clinica-telefone').value = clinica.telefone;
+    document.getElementById('config-clinica-endereco').value = clinica.endereco;
+
+    const formClinica = document.getElementById('form-clinica');
+    if (formClinica) {
+        formClinica.addEventListener('submit', (evento) => {
+            evento.preventDefault();
+            salvarClinicaForm();
+        });
+    }
+}
+
+function salvarClinicaForm() {
+    const clinica = {
+        nome: document.getElementById('config-clinica-nome').value.trim(),
+        telefone: document.getElementById('config-clinica-telefone').value.trim(),
+        endereco: document.getElementById('config-clinica-endereco').value.trim(),
+    };
+
+    db.salvarClinica(clinica);
+
+    const aviso = document.getElementById('config-clinica-salvo-aviso');
+    if (aviso) {
+        aviso.hidden = false;
+        setTimeout(() => { aviso.hidden = true; }, 2000);
+    }
 }
 
 function salvarPerfilForm() {

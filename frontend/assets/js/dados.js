@@ -117,6 +117,13 @@ const SEED_PERFIL = {
     cargo: 'Cirurgião-Dentista',
 };
 
+// Dados da clínica, usados no cabeçalho de PDFs (receita, laudo de IA etc.)
+const SEED_CLINICA = {
+    nome: 'OdontoAI Clínica Odontológica',
+    endereco: 'Av. Paulista, 1000 - São Paulo, SP - CEP 01310-100',
+    telefone: '(11) 3000-0000',
+};
+
 // Histórico de análises de imagem feitas na aba IA. Começa vazio — vai
 // enchendo conforme o usuário usa a tela (diferente dos outros SEEDs,
 // que já vêm com dados de exemplo prontos).
@@ -185,6 +192,12 @@ const db = {
     },
     salvarPerfil(perfil) {
         localStorage.setItem('odontoai_perfil', JSON.stringify(perfil));
+    },
+    getClinica() {
+        return carregar('odontoai_clinica', SEED_CLINICA);
+    },
+    salvarClinica(clinica) {
+        localStorage.setItem('odontoai_clinica', JSON.stringify(clinica));
     },
     getAnalises() {
         return carregar('odontoai_analises_ia', SEED_ANALISES);
