@@ -46,13 +46,33 @@
     </div>
 
     <script>
-        // Enquanto não existe backend/autenticação de verdade, qualquer
-        // email/senha preenchidos "entram" — isso é só pra não travar o
-        // fluxo visual. Quando ligarmos a API, aqui vira um fetch('/api/login').
-        document.getElementById('login-form').addEventListener('submit', (evento) => {
-            evento.preventDefault();
-            window.location.href = 'index.html';
+document.getElementById('login-form').addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+
+    const email = document.getElementById('login-email').value;
+    const senha = document.getElementById('login-senha').value;
+
+    try {
+        const resposta = await fetch('http://localhost:3000/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // manda/recebe o cookie de sessão entre frontend e backend
+            body: JSON.stringify({ email, password: senha }),
         });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok) {
+            alert(dados.error || 'Não foi possível entrar.');
+            return;
+        }
+
+        window.location.href = 'index.html';
+    } catch (erro) {
+        console.error('Erro ao conectar no servidor:', erro);
+        alert('Não foi possível conectar ao servidor. Confirma que o backend está rodando (node server.js).');
+    }
+});
     </script>
 </body>
 

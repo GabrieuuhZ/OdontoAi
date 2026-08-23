@@ -194,21 +194,43 @@ document.querySelectorAll('.sidebar a').forEach((link) => {
     link.addEventListener('click', fecharMenuMobile);
 });
 
-// -------- Botão "Sair" --------
-// Por enquanto não existe login de verdade ligado a um servidor, então
-// "sair" aqui é simulado: confirma com a pessoa e manda pra tela de login.
-// Quando o backend/autenticação estiverem prontos, aqui entra também a
-// chamada pra invalidar a sessão/token no servidor antes de redirecionar.
 const btnSair = document.getElementById('btn-sair');
 if (btnSair) {
-    btnSair.addEventListener('click', (evento) => {
+    btnSair.addEventListener('click', async (evento) => {
         evento.preventDefault();
         const confirmou = window.confirm('Deseja sair da sua conta?');
         if (confirmou) {
+            try {
+                await fetch('http://localhost:3000/api/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+            } catch (erro) {
+                console.error('Erro ao encerrar sessão no servidor:', erro);
+            }
             window.location.href = 'login.html';
         }
     });
 }
 
-// Primeira carga: respeita o hash da URL (ex: recarregou em #clientes.html), senão abre o Dashboard
-carregarPagina(paginaPeloHash(), false);
+async function verificarLogin() {
+    try {
+        const resposta = await fetch('http://localhost:3000/api/me', { credentials: 'include' });
+        if (!resposta.ok) {
+            window.location.href = 'login.html';
+            return false;
+        }
+        return true;
+    } catch (erro) {
+        console.error('Não foi possível verificar login:', erro);
+        window.location.href = 'login.html';
+        return false;
+    }
+}
+
+// Só carrega a página se realmente estiver logado — senão já manda pro login
+verificarLogin().then((autenticado) => {
+    if (autenticado) {
+        carregarPagina(paginaPeloHash(), false);
+    }
+});

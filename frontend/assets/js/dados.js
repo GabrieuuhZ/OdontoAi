@@ -4,6 +4,28 @@
 // Quando a API de verdade existir, é só trocar as funções db.get*/db.salvar*
 // por chamadas fetch() — o resto do código (telas) não muda.
 
+// Endereço base da API — muda aqui quando o backend for hospedado noutro lugar
+const API_BASE = 'http://localhost:3000/api';
+
+// Função "ajudante" que todo o resto do dados.js vai usar pra falar com o backend.
+// Já cuida de: mandar o cookie de sessão, mandar/receber JSON, e jogar um erro
+// entendível se a resposta não vier OK (pra quem chamar poder tratar com try/catch).
+async function chamarApi(caminho, opcoes = {}) {
+    const resposta = await fetch(`${API_BASE}${caminho}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        ...opcoes,
+    });
+
+    const dados = await resposta.json().catch(() => null);
+
+    if (!resposta.ok) {
+        throw new Error(dados?.error || 'Erro ao comunicar com o servidor.');
+    }
+
+    return dados;
+}
+
 const SEED_PACIENTES = [
     { id: 1, nome: 'Maria Silva', cpf: '123.456.789-00', telefone: '(11) 98765-4321', email: 'maria.silva@email.com', nascimento: '14/03/1988', endereco: 'Rua das Flores, 123 - São Paulo, SP', convenio: 'Particular', ultimaConsulta: '18/06/2025', proximaConsulta: '25/06/2025', status: 'ativo' },
     { id: 2, nome: 'Pedro Oliveira', cpf: '234.567.890-11', telefone: '(11) 91234-5678', email: 'pedro.oliveira@email.com', nascimento: '02/07/1979', endereco: 'Av. Paulista, 900 - São Paulo, SP', convenio: 'OdontoPrev', ultimaConsulta: '17/06/2025', proximaConsulta: '—', status: 'ativo' },
@@ -169,11 +191,20 @@ function carregar(chave, seed) {
 }
 
 const db = {
-    getPacientes() {
-        return carregar('odontoai_pacientes', SEED_PACIENTES);
+    async getPacientes() {
+        return chamarApi('/pacientes');
     },
-    salvarPacientes(lista) {
-        localStorage.setItem('odontoai_pacientes', JSON.stringify(lista));
+    async criarPaciente(dadosPaciente) {
+        return chamarApi('/pacientes', {
+            method: 'POST',
+            body: JSON.stringify(dadosPaciente),
+        });
+    },
+    async editarPaciente(id, dadosPaciente) {
+        return chamarApi(`/pacientes/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(dadosPaciente),
+        });
     },
     getAgendamentos() {
         return carregar('odontoai_agendamentos', SEED_AGENDAMENTOS);
