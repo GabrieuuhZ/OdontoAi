@@ -106,10 +106,18 @@ app.get('/api/me', requireLogin, async (req, res) => {
 // ROTAS DE PACIENTES
 // ============================================================
 
-// GET /api/pacientes — lista todos (usado na tela Clientes)
 app.get('/api/pacientes', requireLogin, async (req, res) => {
   try {
-    const [pacientes] = await pool.query('SELECT * FROM pacientes ORDER BY nome ASC');
+    const [pacientes] = await pool.query(`
+      SELECT pacientes.*,
+        (SELECT MAX(data) FROM agendamentos
+         WHERE agendamentos.paciente_id = pacientes.id AND agendamentos.status = 'concluido') AS ultimaConsulta,
+        (SELECT MIN(data) FROM agendamentos
+         WHERE agendamentos.paciente_id = pacientes.id AND agendamentos.data >= CURDATE()
+           AND agendamentos.status IN ('agendado', 'confirmado')) AS proximaConsulta
+      FROM pacientes
+      ORDER BY pacientes.nome ASC
+    `);
     res.json(pacientes);
   } catch (erro) {
     console.error('Erro ao buscar pacientes:', erro);
