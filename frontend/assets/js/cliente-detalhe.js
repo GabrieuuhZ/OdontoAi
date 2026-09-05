@@ -1,17 +1,24 @@
 // assets/js/cliente-detalhe.js
 // Comportamento da tela "Ficha do Paciente": carrega o paciente pelo `id`
 // que vem na URL (ex: #cliente-detalhe.html?id=3), preenche os dados
-// pessoais, o histórico de consultas e os diagnósticos/observações — e o
-// botão Editar Cadastro salva as alterações de volta no "banco" (db.js),
-// refletindo também na lista de Clientes.
+// pessoais, o histórico de consultas e os diagnósticos/observações — tudo
+// buscado de verdade na API agora — e o botão Editar Cadastro salva as
+// alterações de volta no banco.
 
 let fichaPacienteId = null;
 
-function iniciarClienteDetalhe() {
+async function iniciarClienteDetalhe() {
     const id = Number(window.obterParametroDaURL('id'));
-    const paciente = db.getPacientes().find((p) => p.id === id);
 
-    if (!id || !paciente) {
+    if (!id) {
+        mostrarPacienteNaoEncontrado();
+        return;
+    }
+
+    let paciente;
+    try {
+        paciente = await db.getPaciente(id);
+    } catch (erro) {
         mostrarPacienteNaoEncontrado();
         return;
     }
@@ -23,7 +30,7 @@ function iniciarClienteDetalhe() {
 
     const btnEditar = document.getElementById('btn-editar-cadastro');
     if (btnEditar) {
-        btnEditar.addEventListener('click', abrirModalCadastro);
+        btnEditar.addEventListener('click', () => abrirModalCadastro(paciente));
     }
 }
 
@@ -38,6 +45,12 @@ function mostrarPacienteNaoEncontrado() {
             <a href="clientes.html" class="btn-primary" style="display: inline-flex; margin-top: 1.2rem;">Voltar para Clientes</a>
         </div>
     `;
+}
+
+// As datas vêm do banco em formato ISO (ex: "2026-06-25T00:00:00.000Z") ou null
+function formatarDataBr(valorIso) {
+    if (!valorIso) return '—';
+    return new Date(valorIso).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
 
 function preencherDadosPaciente(paciente) {
@@ -55,11 +68,17 @@ function preencherDadosPaciente(paciente) {
     statusEl.classList.add(paciente.status);
 }
 
-function renderizarHistoricoConsultas(id) {
+async function renderizarHistoricoConsultas(id) {
     const tbody = document.getElementById('ficha-historico-tbody');
     if (!tbody) return;
 
-    const historico = db.getHistoricoConsultas(id);
+    let historico;
+    try {
+        historico = await db.getHistoricoConsultas(id);
+    } catch (erro) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-muted">Não foi possível carregar o histórico: ${erro.message}</td></tr>`;
+        return;
+    }
 
     if (historico.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Nenhuma consulta registrada ainda.</td></tr>';
@@ -68,8 +87,8 @@ function renderizarHistoricoConsultas(id) {
 
     tbody.innerHTML = historico.map((consulta) => `
         <tr>
-            <td>${consulta.data}</td>
-            <td>${consulta.dentista}</td>
+            <td>${formatarDataBr(consulta.data)}</td>
+            <td>${consulta.dentista_nome || '—'}</td>
             <td>${consulta.procedimento}</td>
             <td><span class="status ${consulta.status}">${rotuloStatus(consulta.status)}</span></td>
         </tr>
@@ -84,11 +103,17 @@ function rotuloStatus(status) {
     return rotulos[status] || status;
 }
 
-function renderizarDiagnosticos(id) {
+async function renderizarDiagnosticos(id) {
     const timelineEl = document.getElementById('ficha-timeline');
     if (!timelineEl) return;
 
-    const diagnosticos = db.getDiagnosticosPaciente(id);
+    let diagnosticos;
+    try {
+        diagnosticos = await db.getDiagnosticosPaciente(id);
+    } catch (erro) {
+        timelineEl.innerHTML = `<p class="text-muted">Não foi possível carregar os diagnósticos: ${erro.message}</p>`;
+        return;
+    }
 
     if (diagnosticos.length === 0) {
         timelineEl.innerHTML = '<p class="text-muted">Nenhum diagnóstico ou observação registrada ainda.</p>';
@@ -98,36 +123,25 @@ function renderizarDiagnosticos(id) {
     timelineEl.innerHTML = diagnosticos.map((item) => `
         <div class="timeline-item">
             <div class="timeline-content">
-                <span class="timeline-date">${item.data}</span>
-                <h4>${item.titulo}${item.geradoPorIA ? ' <small class="text-muted">(via IA)</small>' : ''}</h4>
+                <span class="timeline-date">${formatarDataBr(item.criado_em)}</span>
+                <h4>${item.titulo}${item.gerado_por_ia ? ' <small class="text-muted">(via IA)</small>' : ''}</h4>
                 <p>${item.texto}</p>
             </div>
         </div>
     `).join('');
 }
 
-function abrirModalCadastro() {
-    const nomeEl = document.getElementById('ficha-nome');
-    const statusEl = document.getElementById('ficha-status');
-    const cpfEl = document.getElementById('ficha-cpf');
-    const nascimentoEl = document.getElementById('ficha-nascimento');
-    const telefoneEl = document.getElementById('ficha-telefone');
-    const emailEl = document.getElementById('ficha-email');
-    const enderecoEl = document.getElementById('ficha-endereco');
-    const convenioEl = document.getElementById('ficha-convenio');
-
-    const statusAtual = statusEl.classList.contains('ativo') ? 'ativo' : 'inativo';
-
+function abrirModalCadastro(paciente) {
     const camposHtml = [
-        campoForm({ label: 'Nome completo', name: 'nome', valor: nomeEl.textContent, obrigatorio: true }),
-        campoForm({ label: 'CPF', name: 'cpf', valor: cpfEl.textContent }),
-        campoForm({ label: 'Data de Nascimento', name: 'nascimento', valor: nascimentoEl.textContent }),
-        campoForm({ label: 'Telefone', name: 'telefone', valor: telefoneEl.textContent }),
-        campoForm({ label: 'Email', name: 'email', tipo: 'email', valor: emailEl.textContent }),
-        campoForm({ label: 'Endereço', name: 'endereco', valor: enderecoEl.textContent }),
-        campoForm({ label: 'Convênio', name: 'convenio', valor: convenioEl.textContent }),
+        campoForm({ label: 'Nome completo', name: 'nome', valor: paciente.nome, obrigatorio: true }),
+        campoForm({ label: 'CPF', name: 'cpf', tipo: 'cpf', valor: paciente.cpf || '' }),
+        campoForm({ label: 'Data de Nascimento', name: 'nascimento', valor: paciente.nascimento || '' }),
+        campoForm({ label: 'Telefone', name: 'telefone', tipo: 'telefone', valor: paciente.telefone || '' }),
+        campoForm({ label: 'Email', name: 'email', tipo: 'email', valor: paciente.email || '' }),
+        campoForm({ label: 'Endereço', name: 'endereco', valor: paciente.endereco || '' }),
+        campoForm({ label: 'Convênio', name: 'convenio', valor: paciente.convenio || '' }),
         campoForm({
-            label: 'Status', name: 'status', valor: statusAtual,
+            label: 'Status', name: 'status', valor: paciente.status,
             opcoes: [{ valor: 'ativo', rotulo: 'Ativo' }, { valor: 'inativo', rotulo: 'Inativo' }],
         }),
     ].join('');
@@ -136,26 +150,13 @@ function abrirModalCadastro() {
         titulo: 'Editar Cadastro',
         camposHtml,
         textoSalvar: 'Salvar alterações',
-        aoSalvar(dados) {
-            // Atualiza a tela
-            nomeEl.textContent = dados.nome;
-            cpfEl.textContent = dados.cpf;
-            nascimentoEl.textContent = dados.nascimento;
-            telefoneEl.textContent = dados.telefone;
-            emailEl.textContent = dados.email;
-            enderecoEl.textContent = dados.endereco;
-            convenioEl.textContent = dados.convenio;
-
-            statusEl.textContent = dados.status === 'ativo' ? 'Ativo' : 'Inativo';
-            statusEl.classList.remove('ativo', 'inativo');
-            statusEl.classList.add(dados.status);
-
-            // Atualiza o "banco" de verdade, pra refletir também na lista de Clientes
-            const pacientes = db.getPacientes();
-            const paciente = pacientes.find((p) => p.id === fichaPacienteId);
-            if (paciente) {
+        async aoSalvar(dados) {
+            try {
+                await db.editarPaciente(fichaPacienteId, dados);
                 Object.assign(paciente, dados);
-                db.salvarPacientes(pacientes);
+                preencherDadosPaciente(paciente);
+            } catch (erro) {
+                alert(`Não foi possível salvar as alterações: ${erro.message}`);
             }
         },
     });

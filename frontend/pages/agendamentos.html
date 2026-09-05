@@ -24,7 +24,7 @@
     </div>
     <div class="card">
         <h3 class="text-muted">Esta Semana</h3>
-        <h1 style="margin-top: 0.4rem;" class="primary">74</h1>
+        <h1 style="margin-top: 0.4rem;" class="primary" id="resumo-semana">—</h1>
     </div>
     <div class="card">
         <h3 class="text-muted">Confirmados</h3>
@@ -40,27 +40,25 @@
 <div class="filters-bar">
     <div class="search-bar" style="min-width: 16rem;">
         <span class="material-symbols-outlined" aria-hidden="true">search</span>
-        <input type="text" placeholder="Pesquisar paciente" aria-label="Pesquisar paciente">
+        <input type="text" id="busca-agendamento" placeholder="Pesquisar paciente" aria-label="Pesquisar paciente">
     </div>
 
     <div class="filter-select">
         <span class="material-symbols-outlined" aria-hidden="true">stethoscope</span>
-        <select aria-label="Filtrar por dentista">
-            <option>Todos os dentistas</option>
-            <option>Dr. Carlos</option>
-            <option>Dra. Julia</option>
+        <select id="filtro-dentista" aria-label="Filtrar por dentista">
+            <option value="todos">Todos os dentistas</option>
         </select>
     </div>
 
     <div class="filter-select">
         <span class="material-symbols-outlined" aria-hidden="true">dentistry</span>
-        <select aria-label="Filtrar por procedimento">
-            <option>Todos os procedimentos</option>
-            <option>Limpeza Dental</option>
-            <option>Clareamento</option>
-            <option>Restauração</option>
-            <option>Avaliação</option>
-            <option>Canal</option>
+        <select id="filtro-procedimento" aria-label="Filtrar por procedimento">
+            <option value="todos">Todos os procedimentos</option>
+            <option value="Limpeza Dental">Limpeza Dental</option>
+            <option value="Clareamento">Clareamento</option>
+            <option value="Restauração">Restauração</option>
+            <option value="Avaliação">Avaliação</option>
+            <option value="Canal">Canal</option>
         </select>
     </div>
 

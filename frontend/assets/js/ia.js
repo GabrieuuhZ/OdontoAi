@@ -1,16 +1,18 @@
 // assets/js/ia.js
-// Comportamento da tela IA: upload de imagens (com nome/tamanho/dimensões),
-// busca de paciente com resultado em card, checkbox de consentimento (LGPD,
-// com link pro site oficial da ANPD), análise SIMULADA (sorteia achados de
-// uma lista fixa em dados.js), e as ações de vincular ao paciente / gerar PDF.
+// Comportamento da tela IA: upload de imagens, busca de paciente (agora
+// buscando a lista real da API uma vez, e filtrando em memória), análise
+// SIMULADA (sorteia achados, mas já SALVA de verdade no banco), e as ações
+// de vincular ao paciente (cria um diagnóstico de verdade) / gerar PDF.
 // Chamado pelo roteador (index.js) toda vez que essa página é carregada.
 
-let iaImagensSelecionadas = []; // [{ nome, url, tamanho, largura, altura }]
-let iaPacienteSelecionado = null; // objeto do paciente (ou null)
+let iaImagensSelecionadas = [];
+let iaPacientesCache = []; // lista de pacientes buscada uma vez, pra filtrar a busca localmente
+let iaPacienteSelecionado = null;
+let iaAnalisesCache = []; // histórico já buscado, pra reabrir sem nova chamada
 let iaUltimaAnalise = null;
-let iaOuvinteFecharBusca = null; // guarda a referência do listener pra poder remover o antigo
+let iaOuvinteFecharBusca = null;
 
-function iniciarIA() {
+async function iniciarIA() {
     iaImagensSelecionadas = [];
     iaPacienteSelecionado = null;
     iaUltimaAnalise = null;
@@ -21,6 +23,12 @@ function iniciarIA() {
     document.getElementById('ia-campo-paciente').hidden = false;
 
     renderizarImagensIA();
+
+    try {
+        iaPacientesCache = await db.getPacientes();
+    } catch (erro) {
+        console.error('Não foi possível carregar pacientes:', erro);
+    }
 
     const dropzone = document.getElementById('ia-dropzone');
     const inputArquivo = document.getElementById('ia-input-arquivo');
@@ -62,17 +70,12 @@ function iniciarIA() {
     buscaPaciente.addEventListener('input', () => renderizarBuscaPacienteIA());
     buscaPaciente.addEventListener('focus', () => renderizarBuscaPacienteIA());
 
-    // Antes de adicionar um novo "ouvinte de clique fora da busca", removemos
-    // o antigo (se a pessoa já tinha visitado essa página antes nesta sessão).
-    // Sem isso, os ouvintes se acumulavam a cada visita e, quando a pessoa saía
-    // da página, os antigos continuavam tentando usar um elemento que não
-    // existe mais — o que quebrava com erro em qualquer clique no site.
     if (iaOuvinteFecharBusca) {
         document.removeEventListener('click', iaOuvinteFecharBusca);
     }
     iaOuvinteFecharBusca = (evento) => {
         const resultados = document.getElementById('ia-busca-resultados');
-        if (!resultados) return; // não estamos mais na página IA, não faz nada
+        if (!resultados) return;
         const dentroDaBusca = evento.target.closest('#ia-campo-paciente');
         if (!dentroDaBusca) {
             resultados.hidden = true;
@@ -83,19 +86,6 @@ function iniciarIA() {
     btnAnalisar.addEventListener('click', analisarImagensIA);
 
     document.getElementById('ia-btn-pdf').addEventListener('click', () => {
-        // Se o dentista escreveu algo antes de imprimir, guarda também
-        // (mesmo que ele não tenha vinculado a um paciente ainda)
-        if (iaUltimaAnalise) {
-            const texto = document.getElementById('ia-diagnostico-texto')?.value.trim() || '';
-            iaUltimaAnalise.diagnosticoDentista = texto;
-            const analises = db.getAnalises();
-            const indice = analises.findIndex((a) => a.id === iaUltimaAnalise.id);
-            if (indice !== -1) {
-                analises[indice].diagnosticoDentista = texto;
-                db.salvarAnalises(analises);
-            }
-        }
-
         document.body.classList.add('print-ia');
         window.print();
         setTimeout(() => document.body.classList.remove('print-ia'), 500);
@@ -105,18 +95,13 @@ function iniciarIA() {
 
     atualizarBotaoAnalisarIA();
 
-    // Isso fica por último, e protegido: se sobrou algum registro de uma
-    // versão antiga do app no localStorage (formato diferente do atual),
-    // isso NUNCA pode impedir o resto da página (botão, busca de paciente)
-    // de funcionar. Por isso vem depois de todos os addEventListener acima,
-    // e dentro de um try/catch.
     try {
-        renderizarHistoricoIA();
+        await renderizarHistoricoIA();
     } catch (erro) {
-        console.error('Não foi possível carregar o histórico de análises (dado antigo incompatível?):', erro);
+        console.error('Não foi possível carregar o histórico de análises:', erro);
         const tbody = document.getElementById('ia-historico-tbody');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Não foi possível carregar o histórico. Tente limpar os dados de teste em Configurações.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Não foi possível carregar o histórico.</td></tr>';
         }
     }
 }
@@ -180,9 +165,6 @@ function renderizarImagensIA() {
 }
 
 function atualizarBotaoAnalisarIA() {
-    // O botão fica sempre clicável — se faltar algo, mostramos uma
-    // mensagem explicando o que falta (em vez de só desabilitar sem dizer
-    // por quê, que é o que confundia antes).
     esconderErroAnaliseIA();
 }
 
@@ -198,7 +180,7 @@ function esconderErroAnaliseIA() {
     if (erroEl) erroEl.hidden = true;
 }
 
-// -------- Busca e seleção de paciente --------
+// -------- Busca e seleção de paciente (agora filtra a lista já em memória) --------
 
 function renderizarBuscaPacienteIA() {
     const input = document.getElementById('ia-busca-paciente');
@@ -211,9 +193,9 @@ function renderizarBuscaPacienteIA() {
         return;
     }
 
-    const pacientes = db.getPacientes().filter((p) =>
+    const pacientes = iaPacientesCache.filter((p) =>
         p.nome.toLowerCase().includes(termo) ||
-        p.cpf.includes(termo) ||
+        (p.cpf || '').includes(termo) ||
         String(p.id).includes(termo)
     );
 
@@ -228,7 +210,7 @@ function renderizarBuscaPacienteIA() {
             <div class="avatar blue">${p.nome.charAt(0)}</div>
             <div>
                 <h4>${p.nome}</h4>
-                <small class="text-muted">CPF ${p.cpf} · ID #${String(p.id).padStart(5, '0')}</small>
+                <small class="text-muted">CPF ${p.cpf || '—'} · ID #${String(p.id).padStart(5, '0')}</small>
             </div>
         </li>
     `).join('');
@@ -240,7 +222,7 @@ function renderizarBuscaPacienteIA() {
 }
 
 function selecionarPacienteIA(id) {
-    iaPacienteSelecionado = db.getPacientes().find((p) => p.id === id) || null;
+    iaPacienteSelecionado = iaPacientesCache.find((p) => p.id === id) || null;
     renderizarPacienteSelecionadoIA();
 
     document.getElementById('ia-busca-resultados').hidden = true;
@@ -266,7 +248,7 @@ function renderizarPacienteSelecionadoIA() {
         <div class="avatar blue">${iaPacienteSelecionado.nome.charAt(0)}</div>
         <div class="ia-paciente-card-info">
             <h4>${iaPacienteSelecionado.nome}</h4>
-            <small class="text-muted">CPF ${iaPacienteSelecionado.cpf} · ID #${String(iaPacienteSelecionado.id).padStart(5, '0')}</small>
+            <small class="text-muted">CPF ${iaPacienteSelecionado.cpf || '—'} · ID #${String(iaPacienteSelecionado.id).padStart(5, '0')}</small>
         </div>
         <button type="button" class="ia-btn-remover-paciente" aria-label="Remover paciente vinculado">
             <span class="material-symbols-outlined" aria-hidden="true">close</span>
@@ -276,9 +258,9 @@ function renderizarPacienteSelecionadoIA() {
     card.querySelector('.ia-btn-remover-paciente').addEventListener('click', removerPacienteSelecionadoIA);
 }
 
-// -------- Análise (simulada) --------
+// -------- Análise (sorteio simulado, mas SALVA de verdade no banco) --------
 
-function analisarImagensIA() {
+async function analisarImagensIA() {
     esconderErroAnaliseIA();
 
     if (iaImagensSelecionadas.length === 0) {
@@ -305,38 +287,27 @@ function analisarImagensIA() {
     textoBotao.textContent = 'Analisando imagens...';
     statusEl.hidden = false;
 
-    setTimeout(() => {
+    // O "delay artificial" continua simulando a IA pensando — só que, quando
+    // termina, agora salva de verdade no banco (POST /api/analises-ia)
+    setTimeout(async () => {
         try {
             const quantidadeAchados = 1 + Math.floor(Math.random() * 3);
             const achadosSorteados = [...ACHADOS_POSSIVEIS]
                 .sort(() => Math.random() - 0.5)
-                .slice(0, quantidadeAchados);
+                .slice(0, quantidadeAchados)
+                .map(({ dente, achado, confianca }) => ({ dente, achado, confianca }));
 
-            const agora = new Date();
-
-            iaUltimaAnalise = {
-                id: db.proximoId(db.getAnalises()),
-                data: agora.toLocaleDateString('pt-BR'),
-                hora: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                pacienteId: iaPacienteSelecionado ? iaPacienteSelecionado.id : null,
-                pacienteNome: iaPacienteSelecionado ? iaPacienteSelecionado.nome : null,
-                quantidadeImagens: iaImagensSelecionadas.length,
+            iaUltimaAnalise = await db.criarAnalise({
+                paciente_id: iaPacienteSelecionado ? iaPacienteSelecionado.id : null,
+                quantidade_imagens: iaImagensSelecionadas.length,
                 achados: achadosSorteados,
-                diagnosticoDentista: '',
-            };
-
-            const analises = db.getAnalises();
-            analises.unshift(iaUltimaAnalise);
-            db.salvarAnalises(analises);
+            });
 
             renderizarResultadoIA(iaUltimaAnalise);
-            renderizarHistoricoIA();
+            await renderizarHistoricoIA();
         } catch (erro) {
-            // Se algo desse errado, isso garante que o botão nunca fica
-            // travado pra sempre em "Analisando..." — e mostra o erro real
-            // no console, pra facilitar descobrir o que aconteceu.
             console.error('Erro ao analisar imagens:', erro);
-            alert('Ocorreu um erro ao analisar as imagens. Veja o console (F12) para detalhes.');
+            alert(`Não foi possível salvar a análise: ${erro.message}`);
         } finally {
             statusEl.hidden = true;
             btnAnalisar.disabled = false;
@@ -352,6 +323,12 @@ function gerarObservacoesIA(achados) {
     return `A análise apontou os seguintes achados, que precisam ser confirmados pelo dentista responsável: ${partes.join('; ')}.`;
 }
 
+function formatarDataHoraIA(valorIso) {
+    if (!valorIso) return '';
+    const d = new Date(valorIso);
+    return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 function renderizarResultadoIA(analise) {
     document.getElementById('ia-como-funciona').hidden = true;
 
@@ -363,9 +340,10 @@ function renderizarResultadoIA(analise) {
 
     card.hidden = false;
 
-    metaEl.textContent = analise.pacienteNome
-        ? `Paciente: ${analise.pacienteNome} · ${analise.data} às ${analise.hora} · ${analise.quantidadeImagens} imagem(ns)`
-        : `Sem paciente vinculado · ${analise.data} às ${analise.hora} · ${analise.quantidadeImagens} imagem(ns)`;
+    const dataHora = formatarDataHoraIA(analise.criado_em);
+    metaEl.textContent = analise.paciente_nome
+        ? `Paciente: ${analise.paciente_nome} · ${dataHora} · ${analise.quantidade_imagens} imagem(ns)`
+        : `Sem paciente vinculado · ${dataHora} · ${analise.quantidade_imagens} imagem(ns)`;
 
     listaEl.innerHTML = analise.achados.map((item) => `
         <li class="ia-achado-item">
@@ -380,99 +358,81 @@ function renderizarResultadoIA(analise) {
 
     observacoesEl.textContent = gerarObservacoesIA(analise.achados);
 
-    // Diagnóstico escrito pelo dentista: mantém o que já tinha sido escrito
-    // (se estiver reabrindo do histórico), ou começa em branco pra análise nova
     const textareaDiagnostico = document.getElementById('ia-diagnostico-texto');
     if (textareaDiagnostico) {
-        textareaDiagnostico.value = analise.diagnosticoDentista || '';
+        textareaDiagnostico.value = ''; // sempre começa em branco (o texto só persiste quando vira um diagnóstico salvo)
     }
 
-    // Assinatura: sempre reflete o profissional logado agora
     const perfil = typeof db !== 'undefined' && db.getPerfil ? db.getPerfil() : null;
     document.getElementById('ia-assinatura-nome').textContent = perfil ? perfil.nome : '';
     document.getElementById('ia-assinatura-crm').textContent = perfil ? perfil.crm : '';
-    document.getElementById('ia-assinatura-data').textContent = `Emitido em ${analise.data} às ${analise.hora}`;
+    document.getElementById('ia-assinatura-data').textContent = `Emitido em ${dataHora}`;
 
-    btnSalvarFicha.disabled = !analise.pacienteId;
-    btnSalvarFicha.innerHTML = analise.pacienteId
+    btnSalvarFicha.disabled = !analise.paciente_id;
+    btnSalvarFicha.innerHTML = analise.paciente_id
         ? '<span class="material-symbols-outlined" aria-hidden="true" style="font-size:1.1rem; vertical-align:middle;">link</span> Vincular ao Paciente'
         : '<span class="material-symbols-outlined" aria-hidden="true" style="font-size:1.1rem; vertical-align:middle;">link_off</span> Selecione um paciente';
 
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// -------- Vincular ao paciente --------
+// -------- Vincular ao paciente (cria um diagnóstico de verdade) --------
 
-function salvarAnaliseNaFichaIA() {
-    if (!iaUltimaAnalise || !iaUltimaAnalise.pacienteId) return;
+async function salvarAnaliseNaFichaIA() {
+    if (!iaUltimaAnalise || !iaUltimaAnalise.paciente_id) return;
 
     const resumoAchados = iaUltimaAnalise.achados
         .map((item) => `${item.dente}: ${item.achado} (${item.confianca}%)`)
         .join(' · ');
 
     const diagnosticoDentista = document.getElementById('ia-diagnostico-texto')?.value.trim() || '';
-    const perfil = typeof db !== 'undefined' && db.getPerfil ? db.getPerfil() : null;
-
-    // Guarda o que o dentista escreveu de volta na própria análise (pra
-    // não se perder se reabrir essa análise pelo histórico depois)
-    iaUltimaAnalise.diagnosticoDentista = diagnosticoDentista;
-    const analises = db.getAnalises();
-    const indice = analises.findIndex((a) => a.id === iaUltimaAnalise.id);
-    if (indice !== -1) {
-        analises[indice].diagnosticoDentista = diagnosticoDentista;
-        db.salvarAnalises(analises);
-    }
 
     const textoCompleto = diagnosticoDentista
         ? `Achados da IA: ${resumoAchados}\n\nDiagnóstico do dentista: ${diagnosticoDentista}`
         : `Achados da IA: ${resumoAchados}`;
 
-    db.salvarDiagnosticoPaciente(iaUltimaAnalise.pacienteId, {
-        data: `${iaUltimaAnalise.data} — Gerado por IA`,
-        titulo: 'Sugestão de análise de imagem (IA)',
-        texto: textoCompleto,
-        geradoPorIA: true,
-        // Campos de rastreabilidade: o professor pediu pra guardar o que a
-        // IA gerou originalmente separado do que o dentista aprovou/mudou.
-        textoOriginalIA: resumoAchados,
-        diagnosticoDentista,
-        aprovadoPeloDentista: true,
-        aprovadoPor: perfil ? perfil.nome : null,
-        aprovadoEm: new Date().toLocaleString('pt-BR'),
-    });
-
     const btnSalvarFicha = document.getElementById('ia-btn-salvar-ficha');
     const textoOriginal = btnSalvarFicha.innerHTML;
-    btnSalvarFicha.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true" style="font-size:1.1rem; vertical-align:middle;">check</span> Vinculado!';
-    setTimeout(() => { btnSalvarFicha.innerHTML = textoOriginal; }, 2000);
+
+    try {
+        await db.salvarDiagnosticoPaciente(iaUltimaAnalise.paciente_id, {
+            titulo: 'Sugestão de análise de imagem (IA)',
+            texto: textoCompleto,
+            textoOriginalIA: resumoAchados,
+            diagnosticoDentista,
+            geradoPorIA: true,
+        });
+
+        btnSalvarFicha.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true" style="font-size:1.1rem; vertical-align:middle;">check</span> Vinculado!';
+        setTimeout(() => { btnSalvarFicha.innerHTML = textoOriginal; }, 2000);
+    } catch (erro) {
+        alert(`Não foi possível salvar na ficha do paciente: ${erro.message}`);
+    }
 }
 
 // -------- Histórico --------
 
-function renderizarHistoricoIA() {
+async function renderizarHistoricoIA() {
     const tbody = document.getElementById('ia-historico-tbody');
     if (!tbody) return;
 
-    // Filtra qualquer registro que não tenha o formato esperado (pode ter
-    // sobrado do localStorage de uma versão antiga do app) — assim um
-    // registro incompatível não derruba a lista inteira.
-    const analises = db.getAnalises().filter((a) => a && Array.isArray(a.achados));
+    iaAnalisesCache = (await db.getAnalises()).filter((a) => a && Array.isArray(a.achados));
 
-    if (analises.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Nenhuma análise feita ainda nesta sessão.</td></tr>';
+    if (iaAnalisesCache.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Nenhuma análise feita ainda.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = analises.map((analise) => `
+    tbody.innerHTML = iaAnalisesCache.map((analise) => `
         <tr>
-            <td>${analise.data} ${analise.hora}</td>
-            <td>${analise.pacienteNome || '—'}</td>
-            <td>${analise.quantidadeImagens}</td>
+            <td>${formatarDataHoraIA(analise.criado_em)}</td>
+            <td>${analise.paciente_nome || '—'}</td>
+            <td>${analise.quantidade_imagens}</td>
             <td>${analise.achados.length} achados</td>
             <td><span class="status concluido">Concluída</span></td>
             <td>
                 <div class="row-actions">
-                    <span class="icon-btn" role="button" tabindex="0" data-analise-id="${analise.id}" aria-label="Ver análise de ${analise.data}">
+                    <span class="icon-btn" role="button" tabindex="0" data-analise-id="${analise.id}" aria-label="Ver análise de ${formatarDataHoraIA(analise.criado_em)}">
                         <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                     </span>
                 </div>
@@ -482,7 +442,7 @@ function renderizarHistoricoIA() {
 
     tbody.querySelectorAll('[data-analise-id]').forEach((botao) => {
         botao.addEventListener('click', () => {
-            const analise = db.getAnalises().find((a) => a.id === Number(botao.dataset.analiseId));
+            const analise = iaAnalisesCache.find((a) => a.id === Number(botao.dataset.analiseId));
             if (analise) {
                 iaUltimaAnalise = analise;
                 renderizarResultadoIA(analise);

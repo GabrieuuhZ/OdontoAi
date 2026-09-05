@@ -7,8 +7,8 @@
 
     <div class="header-actions">
         <div class="search-bar">
-            <span class="material-symbols-outlined" aria-hidden="true">search</span>
-            <input type="text" placeholder="Buscar por nome, CPF ou telefone" aria-label="Buscar paciente">
+    <span class="material-symbols-outlined" aria-hidden="true">search</span>
+    <input type="text" id="busca-paciente" placeholder="Buscar por nome, CPF ou telefone" aria-label="Buscar paciente">
         </div>
 
         <button class="btn-primary" type="button" id="btn-novo-paciente">
@@ -45,25 +45,25 @@
 <div class="filters-bar">
     <div class="filter-select">
         <span class="material-symbols-outlined" aria-hidden="true">filter_alt</span>
-        <select aria-label="Filtrar por status">
-            <option>Todos os status</option>
-            <option>Ativos</option>
-            <option>Inativos</option>
+        <select id="filtro-status" aria-label="Filtrar por status">
+            <option value="todos">Todos os status</option>
+            <option value="ativo">Ativos</option>
+            <option value="inativo">Inativos</option>
         </select>
     </div>
 
     <div class="filter-select">
         <span class="material-symbols-outlined" aria-hidden="true">sort</span>
-        <select aria-label="Ordenar por">
-            <option>Ordenar por nome</option>
-            <option>Ordenar por próxima consulta</option>
-            <option>Ordenar por última consulta</option>
+        <select id="filtro-ordenar" aria-label="Ordenar por">
+            <option value="nome">Ordenar por nome</option>
+            <option value="proximaConsulta">Ordenar por próxima consulta</option>
+            <option value="ultimaConsulta">Ordenar por última consulta</option>
         </select>
     </div>
 
     <div class="filter-date">
         <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
-        <input type="date" aria-label="Próxima consulta a partir de">
+        <input type="date" id="filtro-data" aria-label="Próxima consulta a partir de">
     </div>
 </div>
 

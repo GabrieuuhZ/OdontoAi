@@ -1,13 +1,13 @@
 // assets/js/clientes.js
-// Comportamento da tela de Clientes: agora busca e salva os pacientes
-// de verdade na API (backend), em vez do localStorage.
+// Comportamento da tela de Clientes: busca os pacientes de verdade na API,
+// e aplica busca/filtros/ordenação EM CIMA da lista já carregada (sem
+// precisar buscar de novo no servidor a cada letra digitada).
 // Chamado pelo roteador (index.js) toda vez que essa página é carregada.
 
-let pacientesCache = []; // guarda a última lista buscada, pra não ter que
-                          // buscar de novo só pra abrir o modal de editar
+let pacientesCache = []; // guarda a última lista buscada da API
 
 async function iniciarClientes() {
-    await renderizarTabelaPacientes();
+    await buscarERenderizarPacientes();
 
     const btnNovo = document.getElementById('btn-novo-paciente');
     if (btnNovo) {
@@ -29,60 +29,114 @@ async function iniciarClientes() {
             }
         });
     }
+
+    // Busca e filtros: qualquer mudança refiltra a lista que já está em
+    // memória — não faz uma nova chamada à API a cada letra digitada
+    document.getElementById('busca-paciente')?.addEventListener('input', aplicarFiltrosClientes);
+    document.getElementById('filtro-status')?.addEventListener('change', aplicarFiltrosClientes);
+    document.getElementById('filtro-ordenar')?.addEventListener('change', aplicarFiltrosClientes);
+    document.getElementById('filtro-data')?.addEventListener('change', aplicarFiltrosClientes);
 }
 
 // As datas vêm do banco em formato ISO (ex: "2026-06-25T00:00:00.000Z")
 // ou null. Isso converte pro formato brasileiro, ou mostra "—".
 function formatarDataBr(valorIso) {
     if (!valorIso) return '—';
-    // timeZone: 'UTC' evita o problema de "voltar 1 dia" que vimos antes
-    // (o navegador, sem isso, aplica o fuso horário local na conversão)
     return new Date(valorIso).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
 
-async function renderizarTabelaPacientes() {
+// Busca a lista completa na API (isso SIM é uma chamada de rede) e guarda em memória
+async function buscarERenderizarPacientes() {
     const tbody = document.getElementById('tbody-pacientes');
     if (!tbody) return;
 
-    let pacientes;
     try {
-        pacientes = await db.getPacientes();
+        pacientesCache = await db.getPacientes();
     } catch (erro) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-muted">Não foi possível carregar os pacientes: ${erro.message}</td></tr>`;
         return;
     }
 
-    pacientesCache = pacientes;
-
-    tbody.innerHTML = pacientes.map((paciente) => `
-        <tr>
-            <td>${paciente.nome}</td>
-            <td>${paciente.cpf || '—'}</td>
-            <td>${paciente.telefone || '—'}</td>
-            <td>${formatarDataBr(paciente.ultimaConsulta)}</td>
-            <td>${formatarDataBr(paciente.proximaConsulta)}</td>
-            <td><span class="status ${paciente.status}">${paciente.status === 'ativo' ? 'Ativo' : 'Inativo'}</span></td>
-            <td>
-                <div class="row-actions">
-                    <a class="icon-btn" href="cliente-detalhe.html?id=${paciente.id}" aria-label="Ver ficha de ${paciente.nome}">
-                        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                    </a>
-                    <span class="icon-btn" role="button" tabindex="0" data-editar-paciente="${paciente.id}" aria-label="Editar ${paciente.nome}">
-                        <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                    </span>
-                    <span class="icon-btn" role="button" tabindex="0" data-receita-paciente="${paciente.id}" aria-label="Gerar receita para ${paciente.nome}">
-                        <span class="material-symbols-outlined" aria-hidden="true">prescriptions</span>
-                    </span>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-
     const totalPacientes = document.getElementById('total-pacientes');
-    if (totalPacientes) totalPacientes.textContent = pacientes.length.toLocaleString('pt-BR');
+    if (totalPacientes) totalPacientes.textContent = pacientesCache.length.toLocaleString('pt-BR');
+
+    aplicarFiltrosClientes();
+}
+
+// Filtra/ordena a lista JÁ CARREGADA (pacientesCache), sem chamar a API de novo
+function aplicarFiltrosClientes() {
+    const termo = (document.getElementById('busca-paciente')?.value ?? '').trim().toLowerCase();
+    const status = document.getElementById('filtro-status')?.value ?? 'todos';
+    const ordenarPor = document.getElementById('filtro-ordenar')?.value ?? 'nome';
+    const dataMinima = document.getElementById('filtro-data')?.value ?? ''; // "AAAA-MM-DD" ou vazio
+
+    let filtrados = pacientesCache.filter((paciente) => {
+        const bateBusca = !termo ||
+            paciente.nome.toLowerCase().includes(termo) ||
+            (paciente.cpf || '').toLowerCase().includes(termo) ||
+            (paciente.telefone || '').toLowerCase().includes(termo);
+
+        const bateStatus = status === 'todos' || paciente.status === status;
+
+        const bateData = !dataMinima || (
+            paciente.proximaConsulta && paciente.proximaConsulta.slice(0, 10) >= dataMinima
+        );
+
+        return bateBusca && bateStatus && bateData;
+    });
+
+    filtrados.sort((a, b) => {
+        if (ordenarPor === 'nome') {
+            return a.nome.localeCompare(b.nome, 'pt-BR');
+        }
+        // Pra "próxima/última consulta": quem não tem data nenhuma vai pro final
+        const valorA = a[ordenarPor];
+        const valorB = b[ordenarPor];
+        if (!valorA && !valorB) return 0;
+        if (!valorA) return 1;
+        if (!valorB) return -1;
+        return new Date(valorA) - new Date(valorB);
+    });
+
+    renderizarLinhasTabela(filtrados);
+}
+
+function renderizarLinhasTabela(pacientes) {
+    const tbody = document.getElementById('tbody-pacientes');
+    if (!tbody) return;
+
+    if (pacientes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-muted">Nenhum paciente encontrado com esses filtros.</td></tr>';
+    } else {
+        tbody.innerHTML = pacientes.map((paciente) => `
+            <tr>
+                <td>${paciente.nome}</td>
+                <td>${paciente.cpf || '—'}</td>
+                <td>${paciente.telefone || '—'}</td>
+                <td>${formatarDataBr(paciente.ultimaConsulta)}</td>
+                <td>${formatarDataBr(paciente.proximaConsulta)}</td>
+                <td><span class="status ${paciente.status}">${paciente.status === 'ativo' ? 'Ativo' : 'Inativo'}</span></td>
+                <td>
+                    <div class="row-actions">
+                        <a class="icon-btn" href="cliente-detalhe.html?id=${paciente.id}" aria-label="Ver ficha de ${paciente.nome}">
+                            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                        </a>
+                        <span class="icon-btn" role="button" tabindex="0" data-editar-paciente="${paciente.id}" aria-label="Editar ${paciente.nome}">
+                            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                        </span>
+                        <span class="icon-btn" role="button" tabindex="0" data-receita-paciente="${paciente.id}" aria-label="Gerar receita para ${paciente.nome}">
+                            <span class="material-symbols-outlined" aria-hidden="true">prescriptions</span>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
 
     const contadorPacientes = document.getElementById('contador-pacientes');
-    if (contadorPacientes) contadorPacientes.textContent = `${pacientes.length} pacientes`;
+    if (contadorPacientes) {
+        contadorPacientes.textContent = `${pacientes.length} paciente${pacientes.length === 1 ? '' : 's'}`;
+    }
 }
 
 function abrirModalPaciente(id = null) {
@@ -105,11 +159,6 @@ function abrirModalPaciente(id = null) {
         async aoSalvar(dados) {
             try {
                 if (paciente) {
-                    // Manda o registro COMPLETO de volta (não só o que mudou),
-                    // reaproveitando os campos que esse formulário não edita
-                    // (email, nascimento, endereço, convênio) — senão a rota
-                    // PUT do backend, que sobrescreve a linha inteira, ia
-                    // apagar esses dados sem querer.
                     await db.editarPaciente(paciente.id, {
                         nome: dados.nome,
                         cpf: dados.cpf,
@@ -128,7 +177,7 @@ function abrirModalPaciente(id = null) {
                         status: dados.status,
                     });
                 }
-                await renderizarTabelaPacientes();
+                await buscarERenderizarPacientes();
             } catch (erro) {
                 alert(`Não foi possível salvar o paciente: ${erro.message}`);
             }
@@ -137,9 +186,6 @@ function abrirModalPaciente(id = null) {
 }
 
 // -------- Receita (prescrição) --------
-// Ainda não persiste no banco (a rota POST /api/receitas já existe, mas
-// essa conversão específica fica pra quando chegarmos nessa parte) —
-// por enquanto continua só gerando o PDF, igual antes.
 
 function abrirModalReceita(id) {
     const paciente = pacientesCache.find((p) => p.id === id);

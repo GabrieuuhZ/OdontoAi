@@ -102,6 +102,53 @@ app.get('/api/me', requireLogin, async (req, res) => {
   }
 });
 
+
+// ============================================================
+// ROTAS DASHBOARD
+// ============================================================
+
+// GET /api/dashboard?data=... — resumo completo pro Dashboard
+app.get('/api/dashboard', requireLogin, async (req, res) => {
+  try {
+    const data = req.query.data || new Date().toISOString().slice(0, 10);
+
+    const [[{ totalPacientes }]] = await pool.query('SELECT COUNT(*) AS totalPacientes FROM pacientes');
+
+    const [agendaHoje] = await pool.query(`
+      SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
+      FROM agendamentos
+      JOIN pacientes ON pacientes.id = agendamentos.paciente_id
+      LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
+      WHERE agendamentos.data = ? ORDER BY agendamentos.horario ASC
+    `, [data]);
+
+    const [[{ total: consultasOntem }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM agendamentos WHERE data = DATE_SUB(?, INTERVAL 1 DAY)', [data]
+    );
+
+    const [semanaBruta] = await pool.query(`
+      SELECT data, COUNT(*) AS total FROM agendamentos
+      WHERE data BETWEEN DATE_SUB(?, INTERVAL WEEKDAY(?) DAY)
+                      AND DATE_ADD(DATE_SUB(?, INTERVAL WEEKDAY(?) DAY), INTERVAL 6 DAY)
+      GROUP BY data
+    `, [data, data, data, data]);
+
+    const [[statusGeral]] = await pool.query(`
+      SELECT
+        SUM(status = 'concluido') AS concluidas,
+        SUM(status IN ('agendado','confirmado')) AS agendadas,
+        SUM(status IN ('cancelado','faltou')) AS canceladas,
+        COUNT(*) AS total
+      FROM agendamentos
+    `);
+
+    res.json({ totalPacientes, agendaHoje, consultasOntem, semanaBruta, statusGeral });
+  } catch (erro) {
+    console.error('Erro ao buscar resumo do dashboard:', erro);
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
 // ============================================================
 // ROTAS DE PACIENTES
 // ============================================================
@@ -676,8 +723,63 @@ app.put('/api/clinica', requireLogin, async (req, res) => {
 });
 
 // ============================================================
+// ROTA DE USUÁRIOS ( só usada pra listar dentistas nos agendamentos)
+// ============================================================
+
+// GET /api/usuarios?papel=dentista — lista usuários, filtrando por papel se pedido
+app.get('/api/usuarios', requireLogin, async (req, res) => {
+  try {
+    const { papel } = req.query;
+    const [usuarios] = papel
+      ? await pool.query('SELECT id, nome, email, papel, crm, cargo FROM usuarios WHERE papel = ? ORDER BY nome ASC', [papel])
+      : await pool.query('SELECT id, nome, email, papel, crm, cargo FROM usuarios ORDER BY nome ASC');
+    res.json(usuarios);
+  } catch (erro) {
+    console.error('Erro ao buscar usuários:', erro);
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
+// GET /api/agendamentos/buscar?termo=maria — acha por nome, em QUALQUER data
+app.get('/api/agendamentos/buscar', requireLogin, async (req, res) => {
+  try {
+    const termo = `%${req.query.termo || ''}%`;
+    const [agendamentos] = await pool.query(`
+      SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
+      FROM agendamentos
+      JOIN pacientes ON pacientes.id = agendamentos.paciente_id
+      LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
+      WHERE pacientes.nome LIKE ?
+      ORDER BY agendamentos.data DESC, agendamentos.horario ASC
+      LIMIT 100
+    `, [termo]);
+    res.json(agendamentos);
+  } catch (erro) {
+    console.error('Erro ao buscar agendamentos:', erro);
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
+// GET /api/agendamentos/semana?data=... — total de agendamentos na semana (seg-dom) daquela data
+app.get('/api/agendamentos/semana', requireLogin, async (req, res) => {
+  try {
+    const data = req.query.data || new Date().toISOString().slice(0, 10);
+    const [linhas] = await pool.query(`
+      SELECT COUNT(*) AS total FROM agendamentos
+      WHERE data BETWEEN DATE_SUB(?, INTERVAL WEEKDAY(?) DAY)
+                      AND DATE_ADD(DATE_SUB(?, INTERVAL WEEKDAY(?) DAY), INTERVAL 6 DAY)
+    `, [data, data, data, data]);
+    res.json({ total: linhas[0].total });
+  } catch (erro) {
+    console.error('Erro ao buscar resumo da semana:', erro);
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
+// ============================================================
 // FIM DAS ROTAS  
 // ============================================================
+
 
 async function iniciar() {
   await iniciarBanco(); // garante que as tabelas existem antes do servidor começar a responder

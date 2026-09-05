@@ -59,6 +59,11 @@ function marcarLinkAtivo(nomePagina) {
 // (isso substitui o que antes era feito automaticamente no carregamento do <script>)
 function inicializarPagina(nomePagina) {
     // Comportamento específico da tela de Agendamentos (chips de status, data do filtro)
+
+    if (nomePagina === 'index.html' && typeof iniciarDashboard === 'function') {
+        iniciarDashboard();
+    }
+    
     if (nomePagina === 'agendamentos.html' && typeof iniciarAgendamentos === 'function') {
         iniciarAgendamentos();
     }
