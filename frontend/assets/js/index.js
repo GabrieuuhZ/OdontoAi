@@ -206,21 +206,21 @@ if (btnSair) {
         const confirmou = window.confirm('Deseja sair da sua conta?');
         if (confirmou) {
             try {
-                await fetch('http://localhost:3000/api/logout', {
+                await fetch('/api/logout', {
                     method: 'POST',
                     credentials: 'include',
                 });
             } catch (erro) {
                 console.error('Erro ao encerrar sessão no servidor:', erro);
             }
-            window.location.href = 'login.html';
+            window.location.href = 'login.html';    
         }
     });
 }
 
 async function verificarLogin() {
     try {
-        const resposta = await fetch('http://localhost:3000/api/me', { credentials: 'include' });
+        const resposta = await fetch('/api/me', { credentials: 'include' });
         if (!resposta.ok) {
             window.location.href = 'login.html';
             return false;

@@ -8,7 +8,7 @@
 // O resto (chat, perfil, clínica, IA, e SALVAR diagnóstico) ainda usa
 // localStorage — vamos convertendo aos poucos, tela por tela.
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = '/api';
 
 async function chamarApi(caminho, opcoes = {}) {
     const resposta = await fetch(`${API_BASE}${caminho}`, {

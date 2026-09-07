@@ -53,7 +53,7 @@ document.getElementById('login-form').addEventListener('submit', async (evento) 
     const senha = document.getElementById('login-senha').value;
 
     try {
-        const resposta = await fetch('http://localhost:3000/api/login', {
+        const resposta = await fetch('/api/login', {    
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include', // manda/recebe o cookie de sessão entre frontend e backend

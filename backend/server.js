@@ -3,24 +3,20 @@
 // rotas da API.
 // ------------------------------------------------------------------
 
-const cors = require('cors');
-
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const path = require('path');
 const bcrypt = require('bcrypt');
 const { pool, iniciarBanco } = require('./database');
-
 const app = express();
-
-app.use(cors({
-  origin: 'http://127.0.0.1:5500', // o endereço de onde seu frontend abre (Live Server)
-  credentials: true, // permite enviar/receber o cookie de sessão entre origens diferentes
-}));
-
 const PORT = 3000;
 
 app.use(express.json()); // permite ler JSON enviado pelo front-end (fetch/POST)
+
+// Serve o frontend inteiro (HTML, CSS, JS, imagens) direto pelo Express —
+// assim frontend e backend moram no mesmo endereço, sem precisar do Live Server
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'troque-essa-frase-por-algo-aleatorio-e-secreto',
