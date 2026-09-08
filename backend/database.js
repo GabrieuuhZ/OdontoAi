@@ -5,10 +5,10 @@ const bcrypt = require('bcrypt');
 // Um "pool" é um grupo de conexões reaproveitáveis com o banco — melhor
 // que abrir uma conexão nova a cada consulta (mais rápido, mais robusto)
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  host: process.env.MYSQLHOST,
+  port: process.env.MYSQLPORT || 3306,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
 });
 
