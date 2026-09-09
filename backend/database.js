@@ -2,16 +2,18 @@ require('dotenv').config(); // carrega o .env pras variáveis process.env.*
 const mysql = require('mysql2/promise'); // versão "promise" = dá pra usar await
 const bcrypt = require('bcrypt');
 
-// Um "pool" é um grupo de conexões reaproveitáveis com o banco — melhor
-// que abrir uma conexão nova a cada consulta (mais rápido, mais robusto)
-const pool = mysql.createPool({
-  host: process.env.MYSQLHOST,
-  port: process.env.MYSQLPORT || 3306,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-});
-
+// Se existir MYSQL_URL (formato do Railway: mysql://usuario:senha@host:porta/banco),
+// usa ela direto. Senão, monta a conexão peça por peça (pro seu ambiente local).
+const pool = process.env.MYSQL_URL
+  ? mysql.createPool(process.env.MYSQL_URL)
+  : mysql.createPool({
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+    
 async function criarTabelas() {
   // ============================================================
   // USUÁRIOS (dentistas e recepcionistas que fazem login)
