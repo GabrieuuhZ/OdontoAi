@@ -2,6 +2,9 @@ require('dotenv').config(); // carrega o .env pras variáveis process.env.*
 const mysql = require('mysql2/promise'); // versão "promise" = dá pra usar await
 const bcrypt = require('bcrypt');
 
+console.log('DEBUG - MYSQLHOST:', process.env.MYSQLHOST);
+console.log('DEBUG - MYSQL_URL existe?', !!process.env.MYSQL_URL);
+
 // Se existir MYSQL_URL (formato do Railway: mysql://usuario:senha@host:porta/banco),
 // usa ela direto. Senão, monta a conexão peça por peça (pro seu ambiente local).
 const pool = process.env.MYSQL_URL
