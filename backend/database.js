@@ -1,42 +1,39 @@
-require('dotenv').config(); // carrega o .env pras variáveis process.env.*
-const mysql = require('mysql2/promise'); // versão "promise" = dá pra usar await
+// database.js
+// ------------------------------------------------------------------
+// Versão PostgreSQL (Neon) — antes era MySQL. As tabelas são as mesmas
+// 10 de sempre, só a sintaxe SQL muda um pouco:
+// - AUTO_INCREMENT virou SERIAL
+// - ENUM virou TEXT + CHECK (Postgres não tem ENUM inline como o MySQL)
+// - TINYINT(1) virou BOOLEAN
+// - Os placeholders viram $1, $2, $3... em vez de "?"
+// ------------------------------------------------------------------
+
+require('dotenv').config();
+const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 
-console.log('DEBUG - MYSQLHOST:', process.env.MYSQLHOST);
-console.log('DEBUG - MYSQL_URL existe?', !!process.env.MYSQL_URL);
+// O Neon (e o Render, se você usar o Postgres dele) fornecem uma única
+// variável DATABASE_URL com tudo junto (usuário, senha, host, porta, banco).
+// O "ssl" é necessário porque esses serviços exigem conexão criptografada.
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+});
 
-// Se existir MYSQL_URL (formato do Railway: mysql://usuario:senha@host:porta/banco),
-// usa ela direto. Senão, monta a conexão peça por peça (pro seu ambiente local).
-const pool = process.env.MYSQL_URL
-  ? mysql.createPool(process.env.MYSQL_URL)
-  : mysql.createPool({
-      host: process.env.MYSQLHOST || process.env.DB_HOST,
-      port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
-      user: process.env.MYSQLUSER || process.env.DB_USER,
-      password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD,
-      database: process.env.MYSQLDATABASE || process.env.DB_NAME,
-    });
-    
 async function criarTabelas() {
-  // ============================================================
-  // USUÁRIOS (dentistas e recepcionistas que fazem login)
-  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS usuarios (
-      id INT PRIMARY KEY AUTO_INCREMENT,
+      id SERIAL PRIMARY KEY,
       nome VARCHAR(150) NOT NULL,
       email VARCHAR(150) NOT NULL UNIQUE,
       senha_hash VARCHAR(255) NOT NULL,
-      papel ENUM('dentista', 'recepcionista', 'admin') NOT NULL DEFAULT 'dentista',
+      papel TEXT NOT NULL DEFAULT 'dentista' CHECK (papel IN ('dentista', 'recepcionista', 'admin')),
       crm VARCHAR(50),
       cargo VARCHAR(100),
       criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
-  // ============================================================
-  // CLÍNICA (dados usados no cabeçalho de PDFs — receita, laudo etc.)
-  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS clinica (
       id INT PRIMARY KEY,
@@ -46,12 +43,9 @@ async function criarTabelas() {
     );
   `);
 
-  // ============================================================
-  // PACIENTES
-  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pacientes (
-      id INT PRIMARY KEY AUTO_INCREMENT,
+      id SERIAL PRIMARY KEY,
       nome VARCHAR(150) NOT NULL,
       cpf VARCHAR(20) UNIQUE,
       telefone VARCHAR(30),
@@ -59,133 +53,107 @@ async function criarTabelas() {
       nascimento VARCHAR(20),
       endereco VARCHAR(255),
       convenio VARCHAR(100),
-      status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+      status TEXT NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo')),
       criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
-  // ============================================================
-  // AGENDAMENTOS
-  // ============================================================
-  // "hoje" = WHERE data = data de hoje; "histórico de um paciente" =
-  // WHERE paciente_id = X ORDER BY data DESC — uma tabela só pros dois casos.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS agendamentos (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      paciente_id INT NOT NULL,
-      dentista_id INT,
+      id SERIAL PRIMARY KEY,
+      paciente_id INT NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
+      dentista_id INT REFERENCES usuarios(id),
       data DATE NOT NULL,
       horario VARCHAR(10) NOT NULL,
       procedimento VARCHAR(150) NOT NULL,
-      status ENUM('agendado', 'confirmado', 'concluido', 'cancelado', 'faltou') NOT NULL DEFAULT 'agendado',
-      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-      FOREIGN KEY (dentista_id) REFERENCES usuarios(id)
+      status TEXT NOT NULL DEFAULT 'agendado'
+        CHECK (status IN ('agendado', 'confirmado', 'concluido', 'cancelado', 'faltou')),
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
-  // ============================================================
-  // DIAGNÓSTICOS / OBSERVAÇÕES (ficha do paciente)
-  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS diagnosticos (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      paciente_id INT NOT NULL,
+      id SERIAL PRIMARY KEY,
+      paciente_id INT NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
       titulo VARCHAR(200) NOT NULL,
       texto TEXT NOT NULL,
       texto_original_ia TEXT,
       diagnostico_dentista TEXT,
-      gerado_por_ia TINYINT(1) NOT NULL DEFAULT 0,
-      aprovado_pelo_dentista TINYINT(1) NOT NULL DEFAULT 0,
-      aprovado_por INT,
+      gerado_por_ia BOOLEAN NOT NULL DEFAULT FALSE,
+      aprovado_pelo_dentista BOOLEAN NOT NULL DEFAULT FALSE,
+      aprovado_por INT REFERENCES usuarios(id),
       aprovado_em VARCHAR(50),
-      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-      FOREIGN KEY (aprovado_por) REFERENCES usuarios(id)
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
-  // ============================================================
-  // ANÁLISES DE IA + ACHADOS
-  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS analises_ia (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      paciente_id INT,
+      id SERIAL PRIMARY KEY,
+      paciente_id INT REFERENCES pacientes(id),
       quantidade_imagens INT NOT NULL DEFAULT 0,
-      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS achados_ia (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      analise_id INT NOT NULL,
+      id SERIAL PRIMARY KEY,
+      analise_id INT NOT NULL REFERENCES analises_ia(id) ON DELETE CASCADE,
       dente VARCHAR(50) NOT NULL,
       achado VARCHAR(255) NOT NULL,
-      confianca INT NOT NULL,
-      FOREIGN KEY (analise_id) REFERENCES analises_ia(id) ON DELETE CASCADE
+      confianca INT NOT NULL
     );
   `);
 
-  // ============================================================
-  // CHAT (conversas + mensagens)
-  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS conversas (
-      id INT PRIMARY KEY AUTO_INCREMENT,
+      id SERIAL PRIMARY KEY,
       nome VARCHAR(150) NOT NULL,
       papel VARCHAR(50) NOT NULL,
-      paciente_id INT,
-      FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+      paciente_id INT REFERENCES pacientes(id)
     );
   `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS mensagens (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      conversa_id INT NOT NULL,
-      autor ENUM('eu', 'outro') NOT NULL,
+      id SERIAL PRIMARY KEY,
+      conversa_id INT NOT NULL REFERENCES conversas(id) ON DELETE CASCADE,
+      autor TEXT NOT NULL CHECK (autor IN ('eu', 'outro')),
       texto TEXT NOT NULL,
-      enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (conversa_id) REFERENCES conversas(id) ON DELETE CASCADE
+      enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
-  // ============================================================
-  // RECEITAS
-  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS receitas (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      paciente_id INT NOT NULL,
-      dentista_id INT,
+      id SERIAL PRIMARY KEY,
+      paciente_id INT NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
+      dentista_id INT REFERENCES usuarios(id),
       texto TEXT NOT NULL,
-      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-      FOREIGN KEY (dentista_id) REFERENCES usuarios(id)
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 }
 
 async function inserirDadosIniciais() {
-  const [usuarios] = await pool.query('SELECT * FROM usuarios WHERE email = ?', ['carlos@odontoai.com']);
+  const { rows: usuarios } = await pool.query('SELECT * FROM usuarios WHERE email = $1', ['carlos@odontoai.com']);
 
   if (usuarios.length === 0) {
-    const senhaHash = await bcrypt.hash('123456', 10); // NUNCA salvar a senha "crua"
+    const senhaHash = await bcrypt.hash('123456', 10);
     await pool.query(
-      `INSERT INTO usuarios (nome, email, senha_hash, papel, crm, cargo) VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO usuarios (nome, email, senha_hash, papel, crm, cargo) VALUES ($1, $2, $3, $4, $5, $6)`,
       ['Dr. Carlos', 'carlos@odontoai.com', senhaHash, 'dentista', 'CRO-SP 45.678', 'Cirurgião-Dentista']
     );
     console.log('Usuário de teste criado: carlos@odontoai.com / senha: 123456');
   }
 
-  const [clinicas] = await pool.query('SELECT * FROM clinica WHERE id = 1');
+  const { rows: clinicas } = await pool.query('SELECT * FROM clinica WHERE id = 1');
 
   if (clinicas.length === 0) {
     await pool.query(
-      `INSERT INTO clinica (id, nome, endereco, telefone) VALUES (1, ?, ?, ?)`,
+      `INSERT INTO clinica (id, nome, endereco, telefone) VALUES (1, $1, $2, $3)`,
       ['OdontoAI Clínica Odontológica', 'Av. Paulista, 1000 - São Paulo, SP - CEP 01310-100', '(11) 3000-0000']
     );
   }

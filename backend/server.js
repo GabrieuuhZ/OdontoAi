@@ -1,21 +1,27 @@
 // server.js
 // ------------------------------------------------------------------
-// rotas da API.
+// Versão PostgreSQL. Principais mudanças em relação à versão MySQL:
+// - "?" virou "$1, $2, $3..." nas consultas
+// - pool.query devolve { rows } em vez de [rows]
+// - pra pegar o id de um INSERT, usamos "RETURNING id" (em vez de
+//   resultado.insertId, que só existe no mysql2)
+// - "ON DUPLICATE KEY UPDATE" virou "ON CONFLICT ... DO UPDATE SET"
+// - cálculos de data (semana, ontem) agora são feitos em JavaScript,
+//   e só o resultado (uma data pronta) é mandado pro banco — assim não
+//   dependemos de funções de data que MySQL e Postgres escrevem diferente
 // ------------------------------------------------------------------
 
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const session = require('express-session');
-const path = require('path');
 const bcrypt = require('bcrypt');
 const { pool, iniciarBanco } = require('./database');
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json()); // permite ler JSON enviado pelo front-end (fetch/POST)
-
-// Serve o frontend inteiro (HTML, CSS, JS, imagens) direto pelo Express —
-// assim frontend e backend moram no mesmo endereço, sem precisar do Live Server
+app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 app.use(session({
@@ -23,13 +29,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 1000 * 60 * 60 * 8, // sessão dura 8 horas
+    maxAge: 1000 * 60 * 60 * 8,
     httpOnly: true,
   },
 }));
 
-// -------- Middleware de proteção --------
-// Qualquer rota que usar isso só deixa passar se o usuário estiver logado.
 function requireLogin(req, res, next) {
   if (req.session.userId) {
     next();
@@ -38,33 +42,51 @@ function requireLogin(req, res, next) {
   }
 }
 
+// -------- Helpers de data (calculados em JS, não no banco) --------
+function formatarDataISO(data) {
+  return data.toISOString().slice(0, 10);
+}
+
+function calcularSemana(dataString) {
+  const data = new Date(`${dataString}T00:00:00Z`);
+  const diaSemana = data.getUTCDay(); // 0 = domingo
+  const offsetSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const segunda = new Date(data);
+  segunda.setUTCDate(data.getUTCDate() + offsetSegunda);
+  const domingo = new Date(segunda);
+  domingo.setUTCDate(segunda.getUTCDate() + 6);
+  return { segunda: formatarDataISO(segunda), domingo: formatarDataISO(domingo) };
+}
+
+function calcularOntem(dataString) {
+  const data = new Date(`${dataString}T00:00:00Z`);
+  data.setUTCDate(data.getUTCDate() - 1);
+  return formatarDataISO(data);
+}
+
 // ============================================================
 // ROTAS DE AUTENTICAÇÃO
 // ============================================================
 
-// POST /api/login
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
     }
 
-    const [usuarios] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
-    const usuario = usuarios[0];
+    const { rows } = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+    const usuario = rows[0];
 
     if (!usuario) {
       return res.status(401).json({ error: 'Email ou senha inválidos.' });
     }
 
     const senhaCorreta = await bcrypt.compare(password, usuario.senha_hash);
-
     if (!senhaCorreta) {
       return res.status(401).json({ error: 'Email ou senha inválidos.' });
     }
 
-    // Senha certa: cria a sessão
     req.session.userId = usuario.id;
 
     res.json({
@@ -77,70 +99,38 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// POST /api/logout
 app.post('/api/logout', (req, res) => {
   req.session.destroy(() => {
     res.json({ message: 'Logout realizado.' });
   });
 });
 
-// GET /api/me — pro front-end saber "quem está logado agora"
 app.get('/api/me', requireLogin, async (req, res) => {
   try {
-    const [usuarios] = await pool.query(
-      'SELECT id, nome, email, papel, crm, cargo FROM usuarios WHERE id = ?',
+    const { rows } = await pool.query(
+      'SELECT id, nome, email, papel, crm, cargo FROM usuarios WHERE id = $1',
       [req.session.userId]
     );
-    res.json(usuarios[0]);
+    res.json(rows[0]);
   } catch (erro) {
     console.error('Erro ao buscar usuário:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-
 // ============================================================
-// ROTAS DASHBOARD
+// ROTAS DE USUÁRIOS (dentistas)
 // ============================================================
 
-// GET /api/dashboard?data=... — resumo completo pro Dashboard
-app.get('/api/dashboard', requireLogin, async (req, res) => {
+app.get('/api/usuarios', requireLogin, async (req, res) => {
   try {
-    const data = req.query.data || new Date().toISOString().slice(0, 10);
-
-    const [[{ totalPacientes }]] = await pool.query('SELECT COUNT(*) AS totalPacientes FROM pacientes');
-
-    const [agendaHoje] = await pool.query(`
-      SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
-      FROM agendamentos
-      JOIN pacientes ON pacientes.id = agendamentos.paciente_id
-      LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
-      WHERE agendamentos.data = ? ORDER BY agendamentos.horario ASC
-    `, [data]);
-
-    const [[{ total: consultasOntem }]] = await pool.query(
-      'SELECT COUNT(*) AS total FROM agendamentos WHERE data = DATE_SUB(?, INTERVAL 1 DAY)', [data]
-    );
-
-    const [semanaBruta] = await pool.query(`
-      SELECT data, COUNT(*) AS total FROM agendamentos
-      WHERE data BETWEEN DATE_SUB(?, INTERVAL WEEKDAY(?) DAY)
-                      AND DATE_ADD(DATE_SUB(?, INTERVAL WEEKDAY(?) DAY), INTERVAL 6 DAY)
-      GROUP BY data
-    `, [data, data, data, data]);
-
-    const [[statusGeral]] = await pool.query(`
-      SELECT
-        SUM(status = 'concluido') AS concluidas,
-        SUM(status IN ('agendado','confirmado')) AS agendadas,
-        SUM(status IN ('cancelado','faltou')) AS canceladas,
-        COUNT(*) AS total
-      FROM agendamentos
-    `);
-
-    res.json({ totalPacientes, agendaHoje, consultasOntem, semanaBruta, statusGeral });
+    const { papel } = req.query;
+    const { rows } = papel
+      ? await pool.query('SELECT id, nome, email, papel, crm, cargo FROM usuarios WHERE papel = $1 ORDER BY nome ASC', [papel])
+      : await pool.query('SELECT id, nome, email, papel, crm, cargo FROM usuarios ORDER BY nome ASC');
+    res.json(rows);
   } catch (erro) {
-    console.error('Erro ao buscar resumo do dashboard:', erro);
+    console.error('Erro ao buscar usuários:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
@@ -151,85 +141,75 @@ app.get('/api/dashboard', requireLogin, async (req, res) => {
 
 app.get('/api/pacientes', requireLogin, async (req, res) => {
   try {
-    const [pacientes] = await pool.query(`
+    const { rows } = await pool.query(`
       SELECT pacientes.*,
         (SELECT MAX(data) FROM agendamentos
-         WHERE agendamentos.paciente_id = pacientes.id AND agendamentos.status = 'concluido') AS ultimaConsulta,
+         WHERE agendamentos.paciente_id = pacientes.id AND agendamentos.status = 'concluido') AS "ultimaConsulta",
         (SELECT MIN(data) FROM agendamentos
-         WHERE agendamentos.paciente_id = pacientes.id AND agendamentos.data >= CURDATE()
-           AND agendamentos.status IN ('agendado', 'confirmado')) AS proximaConsulta
+         WHERE agendamentos.paciente_id = pacientes.id AND agendamentos.data >= CURRENT_DATE
+           AND agendamentos.status IN ('agendado', 'confirmado')) AS "proximaConsulta"
       FROM pacientes
       ORDER BY pacientes.nome ASC
     `);
-    res.json(pacientes);
+    res.json(rows);
   } catch (erro) {
     console.error('Erro ao buscar pacientes:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// GET /api/pacientes/:id — busca um paciente específico (usado na Ficha do Paciente)
 app.get('/api/pacientes/:id', requireLogin, async (req, res) => {
   try {
-    const [pacientes] = await pool.query('SELECT * FROM pacientes WHERE id = ?', [req.params.id]);
-
-    if (pacientes.length === 0) {
+    const { rows } = await pool.query('SELECT * FROM pacientes WHERE id = $1', [req.params.id]);
+    if (rows.length === 0) {
       return res.status(404).json({ error: 'Paciente não encontrado.' });
     }
-
-    res.json(pacientes[0]);
+    res.json(rows[0]);
   } catch (erro) {
     console.error('Erro ao buscar paciente:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// POST /api/pacientes — cria um paciente novo (usado no botão "Novo Paciente")
 app.post('/api/pacientes', requireLogin, async (req, res) => {
   try {
     const { nome, cpf, telefone, email, nascimento, endereco, convenio, status } = req.body;
-
     if (!nome) {
       return res.status(400).json({ error: 'Nome é obrigatório.' });
     }
 
-    const [resultado] = await pool.query(
+    const { rows } = await pool.query(
       `INSERT INTO pacientes (nome, cpf, telefone, email, nascimento, endereco, convenio, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
       [nome, cpf || null, telefone || null, email || null, nascimento || null, endereco || null, convenio || null, status || 'ativo']
     );
 
-    // Busca o paciente recém-criado pra devolver ele completo (com o id gerado)
-    const [pacientes] = await pool.query('SELECT * FROM pacientes WHERE id = ?', [resultado.insertId]);
-    res.status(201).json(pacientes[0]);
+    res.status(201).json(rows[0]);
   } catch (erro) {
     console.error('Erro ao criar paciente:', erro);
-    // Erro comum aqui: tentar cadastrar um CPF que já existe (por causa do UNIQUE na tabela)
-    if (erro.code === 'ER_DUP_ENTRY') {
+    if (erro.code === '23505') { // código do Postgres pra "violação de UNIQUE"
       return res.status(409).json({ error: 'Já existe um paciente com esse CPF.' });
     }
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// PUT /api/pacientes/:id — edita um paciente existente (usado no botão "Editar")
 app.put('/api/pacientes/:id', requireLogin, async (req, res) => {
   try {
     const { nome, cpf, telefone, email, nascimento, endereco, convenio, status } = req.body;
 
-    const [resultado] = await pool.query(
+    const { rows, rowCount } = await pool.query(
       `UPDATE pacientes
-       SET nome = ?, cpf = ?, telefone = ?, email = ?, nascimento = ?, endereco = ?, convenio = ?, status = ?
-       WHERE id = ?`,
+       SET nome = $1, cpf = $2, telefone = $3, email = $4, nascimento = $5, endereco = $6, convenio = $7, status = $8
+       WHERE id = $9 RETURNING *`,
       [nome, cpf || null, telefone || null, email || null, nascimento || null, endereco || null, convenio || null, status, req.params.id]
     );
 
-    if (resultado.affectedRows === 0) {
+    if (rowCount === 0) {
       return res.status(404).json({ error: 'Paciente não encontrado.' });
     }
 
-    const [pacientes] = await pool.query('SELECT * FROM pacientes WHERE id = ?', [req.params.id]);
-    res.json(pacientes[0]);
+    res.json(rows[0]);
   } catch (erro) {
     console.error('Erro ao editar paciente:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
@@ -240,111 +220,120 @@ app.put('/api/pacientes/:id', requireLogin, async (req, res) => {
 // ROTAS DE AGENDAMENTOS
 // ============================================================
 
-// GET /api/agendamentos?data=2026-08-22 — lista os agendamentos de um dia
-// (usado no Dashboard "Agenda de Hoje" e na tela Agendamentos)
-// Se não vier "?data=...", usa a data de hoje por padrão.
+const SELECT_AGENDAMENTO_COMPLETO = `
+  SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
+  FROM agendamentos
+  JOIN pacientes ON pacientes.id = agendamentos.paciente_id
+  LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
+`;
+
 app.get('/api/agendamentos', requireLogin, async (req, res) => {
   try {
-    const data = req.query.data || new Date().toISOString().slice(0, 10); // "AAAA-MM-DD"
-
-    const [agendamentos] = await pool.query(
-      `SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
-       FROM agendamentos
-       JOIN pacientes ON pacientes.id = agendamentos.paciente_id
-       LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
-       WHERE agendamentos.data = ?
-       ORDER BY agendamentos.horario ASC`,
+    const data = req.query.data || formatarDataISO(new Date());
+    const { rows } = await pool.query(
+      `${SELECT_AGENDAMENTO_COMPLETO} WHERE agendamentos.data = $1 ORDER BY agendamentos.horario ASC`,
       [data]
     );
-
-    res.json(agendamentos);
+    res.json(rows);
   } catch (erro) {
     console.error('Erro ao buscar agendamentos:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// GET /api/agendamentos/paciente/:id — histórico de consultas de UM paciente
-// (usado na Ficha do Paciente, ordenado da mais recente pra mais antiga)
+app.get('/api/agendamentos/buscar', requireLogin, async (req, res) => {
+  try {
+    const termo = `%${req.query.termo || ''}%`;
+    const { rows } = await pool.query(
+      `${SELECT_AGENDAMENTO_COMPLETO} WHERE pacientes.nome ILIKE $1
+       ORDER BY agendamentos.data DESC, agendamentos.horario ASC LIMIT 100`,
+      [termo]
+    );
+    res.json(rows);
+  } catch (erro) {
+    console.error('Erro ao buscar agendamentos:', erro);
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
+app.get('/api/agendamentos/semana', requireLogin, async (req, res) => {
+  try {
+    const data = req.query.data || formatarDataISO(new Date());
+    const { segunda, domingo } = calcularSemana(data);
+    const { rows } = await pool.query(
+      'SELECT COUNT(*) AS total FROM agendamentos WHERE data BETWEEN $1 AND $2',
+      [segunda, domingo]
+    );
+    res.json({ total: Number(rows[0].total) });
+  } catch (erro) {
+    console.error('Erro ao buscar resumo da semana:', erro);
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
 app.get('/api/agendamentos/paciente/:id', requireLogin, async (req, res) => {
   try {
-    const [agendamentos] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT agendamentos.*, usuarios.nome AS dentista_nome
        FROM agendamentos
        LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
-       WHERE agendamentos.paciente_id = ?
+       WHERE agendamentos.paciente_id = $1
        ORDER BY agendamentos.data DESC`,
       [req.params.id]
     );
-
-    res.json(agendamentos);
+    res.json(rows);
   } catch (erro) {
     console.error('Erro ao buscar histórico do paciente:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// POST /api/agendamentos — cria um agendamento novo
 app.post('/api/agendamentos', requireLogin, async (req, res) => {
   try {
     const { paciente_id, dentista_id, data, horario, procedimento, status } = req.body;
-
     if (!paciente_id || !data || !horario || !procedimento) {
       return res.status(400).json({ error: 'Paciente, data, horário e procedimento são obrigatórios.' });
     }
 
-    const [resultado] = await pool.query(
+    const { rows: novo } = await pool.query(
       `INSERT INTO agendamentos (paciente_id, dentista_id, data, horario, procedimento, status)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
       [paciente_id, dentista_id || null, data, horario, procedimento, status || 'agendado']
     );
 
-    const [agendamentos] = await pool.query(
-      `SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
-       FROM agendamentos
-       JOIN pacientes ON pacientes.id = agendamentos.paciente_id
-       LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
-       WHERE agendamentos.id = ?`,
-      [resultado.insertId]
+    const { rows } = await pool.query(
+      `${SELECT_AGENDAMENTO_COMPLETO} WHERE agendamentos.id = $1`,
+      [novo[0].id]
     );
 
-    res.status(201).json(agendamentos[0]);
+    res.status(201).json(rows[0]);
   } catch (erro) {
     console.error('Erro ao criar agendamento:', erro);
-    // Erro comum aqui: paciente_id apontando pra um paciente que não existe
-    if (erro.code === 'ER_NO_REFERENCED_ROW_2') {
+    if (erro.code === '23503') { // violação de FOREIGN KEY no Postgres
       return res.status(400).json({ error: 'Paciente ou dentista informado não existe.' });
     }
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// PUT /api/agendamentos/:id — edita (status, remarcar data/horário, etc.)
 app.put('/api/agendamentos/:id', requireLogin, async (req, res) => {
   try {
     const { dentista_id, data, horario, procedimento, status } = req.body;
 
-    const [resultado] = await pool.query(
-      `UPDATE agendamentos
-       SET dentista_id = ?, data = ?, horario = ?, procedimento = ?, status = ?
-       WHERE id = ?`,
+    const { rowCount } = await pool.query(
+      `UPDATE agendamentos SET dentista_id = $1, data = $2, horario = $3, procedimento = $4, status = $5 WHERE id = $6`,
       [dentista_id || null, data, horario, procedimento, status, req.params.id]
     );
 
-    if (resultado.affectedRows === 0) {
+    if (rowCount === 0) {
       return res.status(404).json({ error: 'Agendamento não encontrado.' });
     }
 
-    const [agendamentos] = await pool.query(
-      `SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
-       FROM agendamentos
-       JOIN pacientes ON pacientes.id = agendamentos.paciente_id
-       LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
-       WHERE agendamentos.id = ?`,
+    const { rows } = await pool.query(
+      `${SELECT_AGENDAMENTO_COMPLETO} WHERE agendamentos.id = $1`,
       [req.params.id]
     );
-
-    res.json(agendamentos[0]);
+    res.json(rows[0]);
   } catch (erro) {
     console.error('Erro ao editar agendamento:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
@@ -355,65 +344,42 @@ app.put('/api/agendamentos/:id', requireLogin, async (req, res) => {
 // ROTAS DE DIAGNÓSTICOS
 // ============================================================
 
-// GET /api/diagnosticos/paciente/:id — lista os diagnósticos/observações
-// de um paciente (usado na Ficha do Paciente, mais recente primeiro)
 app.get('/api/diagnosticos/paciente/:id', requireLogin, async (req, res) => {
   try {
-    const [diagnosticos] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT diagnosticos.*, usuarios.nome AS aprovado_por_nome
        FROM diagnosticos
        LEFT JOIN usuarios ON usuarios.id = diagnosticos.aprovado_por
-       WHERE diagnosticos.paciente_id = ?
+       WHERE diagnosticos.paciente_id = $1
        ORDER BY diagnosticos.criado_em DESC`,
       [req.params.id]
     );
-
-    res.json(diagnosticos);
+    res.json(rows);
   } catch (erro) {
     console.error('Erro ao buscar diagnósticos:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// POST /api/diagnosticos — cria um novo diagnóstico/observação
-// (usado tanto por uma anotação manual quanto pelo "Vincular ao Paciente" da tela de IA)
 app.post('/api/diagnosticos', requireLogin, async (req, res) => {
   try {
     const { paciente_id, titulo, texto, texto_original_ia, diagnostico_dentista, gerado_por_ia } = req.body;
-
     if (!paciente_id || !titulo || !texto) {
       return res.status(400).json({ error: 'Paciente, título e texto são obrigatórios.' });
     }
 
-    // Quem está criando (pegamos da sessão, não confiamos no que o
-    // front-end manda) é registrado como quem aprovou esse diagnóstico
-    const [resultado] = await pool.query(
+    const { rows } = await pool.query(
       `INSERT INTO diagnosticos
         (paciente_id, titulo, texto, texto_original_ia, diagnostico_dentista, gerado_por_ia, aprovado_pelo_dentista, aprovado_por, aprovado_em)
-       VALUES (?, ?, ?, ?, ?, ?, 1, ?, NOW())`,
-      [
-        paciente_id,
-        titulo,
-        texto,
-        texto_original_ia || null,
-        diagnostico_dentista || null,
-        gerado_por_ia ? 1 : 0,
-        req.session.userId,
-      ]
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7, NOW())
+       RETURNING *`,
+      [paciente_id, titulo, texto, texto_original_ia || null, diagnostico_dentista || null, !!gerado_por_ia, req.session.userId]
     );
 
-    const [diagnosticos] = await pool.query(
-      `SELECT diagnosticos.*, usuarios.nome AS aprovado_por_nome
-       FROM diagnosticos
-       LEFT JOIN usuarios ON usuarios.id = diagnosticos.aprovado_por
-       WHERE diagnosticos.id = ?`,
-      [resultado.insertId]
-    );
-
-    res.status(201).json(diagnosticos[0]);
+    res.status(201).json(rows[0]);
   } catch (erro) {
     console.error('Erro ao criar diagnóstico:', erro);
-    if (erro.code === 'ER_NO_REFERENCED_ROW_2') {
+    if (erro.code === '23503') {
       return res.status(400).json({ error: 'Paciente informado não existe.' });
     }
     res.status(500).json({ error: 'Erro no servidor.' });
@@ -424,39 +390,33 @@ app.post('/api/diagnosticos', requireLogin, async (req, res) => {
 // ROTAS DE ANÁLISES DE IA
 // ============================================================
 
-// Função auxiliar (não é uma rota) — busca uma análise já com os
-// achados dela dentro, pra não repetir essa lógica em 3 rotas diferentes
 async function buscarAnaliseCompleta(id) {
-  const [analises] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT analises_ia.*, pacientes.nome AS paciente_nome
      FROM analises_ia
      LEFT JOIN pacientes ON pacientes.id = analises_ia.paciente_id
-     WHERE analises_ia.id = ?`,
+     WHERE analises_ia.id = $1`,
     [id]
   );
+  if (rows.length === 0) return null;
 
-  if (analises.length === 0) return null;
-
-  const analise = analises[0];
-  const [achados] = await pool.query('SELECT * FROM achados_ia WHERE analise_id = ?', [id]);
+  const analise = rows[0];
+  const { rows: achados } = await pool.query('SELECT * FROM achados_ia WHERE analise_id = $1', [id]);
   analise.achados = achados;
-
   return analise;
 }
 
-// GET /api/analises-ia — histórico de todas as análises (mais recente primeiro)
 app.get('/api/analises-ia', requireLogin, async (req, res) => {
   try {
-    const [analises] = await pool.query(
-      `SELECT analises_ia.*, pacientes.nome AS paciente_nome
-       FROM analises_ia
-       LEFT JOIN pacientes ON pacientes.id = analises_ia.paciente_id
-       ORDER BY analises_ia.criado_em DESC`
-    );
+    const { rows: analises } = await pool.query(`
+      SELECT analises_ia.*, pacientes.nome AS paciente_nome
+      FROM analises_ia
+      LEFT JOIN pacientes ON pacientes.id = analises_ia.paciente_id
+      ORDER BY analises_ia.criado_em DESC
+    `);
 
-    // Pra cada análise, busca os achados dela (um paciente pode ter 1 a 3 achados)
     for (const analise of analises) {
-      const [achados] = await pool.query('SELECT * FROM achados_ia WHERE analise_id = ?', [analise.id]);
+      const { rows: achados } = await pool.query('SELECT * FROM achados_ia WHERE analise_id = $1', [analise.id]);
       analise.achados = achados;
     }
 
@@ -467,15 +427,12 @@ app.get('/api/analises-ia', requireLogin, async (req, res) => {
   }
 });
 
-// GET /api/analises-ia/:id — uma análise específica (reabrir do histórico)
 app.get('/api/analises-ia/:id', requireLogin, async (req, res) => {
   try {
     const analise = await buscarAnaliseCompleta(req.params.id);
-
     if (!analise) {
       return res.status(404).json({ error: 'Análise não encontrada.' });
     }
-
     res.json(analise);
   } catch (erro) {
     console.error('Erro ao buscar análise:', erro);
@@ -483,60 +440,46 @@ app.get('/api/analises-ia/:id', requireLogin, async (req, res) => {
   }
 });
 
-// POST /api/analises-ia — cria uma análise nova, já com os achados
-// Corpo esperado: { paciente_id (opcional), quantidade_imagens, achados: [{dente, achado, confianca}, ...] }
 app.post('/api/analises-ia', requireLogin, async (req, res) => {
   try {
     const { paciente_id, quantidade_imagens, achados } = req.body;
-
     if (!Array.isArray(achados) || achados.length === 0) {
       return res.status(400).json({ error: 'Informe ao menos um achado.' });
     }
 
-    const [resultado] = await pool.query(
-      `INSERT INTO analises_ia (paciente_id, quantidade_imagens) VALUES (?, ?)`,
+    const { rows: nova } = await pool.query(
+      `INSERT INTO analises_ia (paciente_id, quantidade_imagens) VALUES ($1, $2) RETURNING id`,
       [paciente_id || null, quantidade_imagens || 0]
     );
+    const analiseId = nova[0].id;
 
-    const analiseId = resultado.insertId;
-
-    // Insere cada achado, um de cada vez, ligado à análise que acabamos de criar
     for (const item of achados) {
       await pool.query(
-        `INSERT INTO achados_ia (analise_id, dente, achado, confianca) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO achados_ia (analise_id, dente, achado, confianca) VALUES ($1, $2, $3, $4)`,
         [analiseId, item.dente, item.achado, item.confianca]
       );
     }
 
-    const analiseCompleta = await buscarAnaliseCompleta(analiseId);
-    res.status(201).json(analiseCompleta);
+    res.status(201).json(await buscarAnaliseCompleta(analiseId));
   } catch (erro) {
     console.error('Erro ao criar análise:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// PUT /api/analises-ia/:id/vincular — vincula (ou troca) o paciente de uma análise
-// já feita (usado no botão "Vincular ao Paciente" da tela de IA)
 app.put('/api/analises-ia/:id/vincular', requireLogin, async (req, res) => {
   try {
     const { paciente_id } = req.body;
-
     if (!paciente_id) {
       return res.status(400).json({ error: 'paciente_id é obrigatório.' });
     }
 
-    const [resultado] = await pool.query(
-      'UPDATE analises_ia SET paciente_id = ? WHERE id = ?',
-      [paciente_id, req.params.id]
-    );
-
-    if (resultado.affectedRows === 0) {
+    const { rowCount } = await pool.query('UPDATE analises_ia SET paciente_id = $1 WHERE id = $2', [paciente_id, req.params.id]);
+    if (rowCount === 0) {
       return res.status(404).json({ error: 'Análise não encontrada.' });
     }
 
-    const analiseCompleta = await buscarAnaliseCompleta(req.params.id);
-    res.json(analiseCompleta);
+    res.json(await buscarAnaliseCompleta(req.params.id));
   } catch (erro) {
     console.error('Erro ao vincular análise:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
@@ -544,78 +487,65 @@ app.put('/api/analises-ia/:id/vincular', requireLogin, async (req, res) => {
 });
 
 // ============================================================
-// ROTAS DE CHAT (conversas + mensagens)
+// ROTAS DE CHAT
 // ============================================================
 
-// GET /api/conversas — lista todas as conversas (usado na lista à esquerda do Chat)
 app.get('/api/conversas', requireLogin, async (req, res) => {
   try {
-    const [conversas] = await pool.query('SELECT * FROM conversas ORDER BY id ASC');
-    res.json(conversas);
+    const { rows } = await pool.query('SELECT * FROM conversas ORDER BY id ASC');
+    res.json(rows);
   } catch (erro) {
     console.error('Erro ao buscar conversas:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// POST /api/conversas — cria uma conversa nova
 app.post('/api/conversas', requireLogin, async (req, res) => {
   try {
     const { nome, papel, paciente_id } = req.body;
-
     if (!nome || !papel) {
       return res.status(400).json({ error: 'Nome e papel são obrigatórios.' });
     }
 
-    const [resultado] = await pool.query(
-      'INSERT INTO conversas (nome, papel, paciente_id) VALUES (?, ?, ?)',
+    const { rows } = await pool.query(
+      'INSERT INTO conversas (nome, papel, paciente_id) VALUES ($1, $2, $3) RETURNING *',
       [nome, papel, paciente_id || null]
     );
-
-    const [conversas] = await pool.query('SELECT * FROM conversas WHERE id = ?', [resultado.insertId]);
-    res.status(201).json(conversas[0]);
+    res.status(201).json(rows[0]);
   } catch (erro) {
     console.error('Erro ao criar conversa:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// GET /api/conversas/:id/mensagens — lista as mensagens de UMA conversa
-// (repara que a URL tem o id da conversa NO MEIO do caminho, não no final —
-// isso é normal quando um recurso "pertence" a outro: mensagem sempre
-// pertence a uma conversa, então a URL reflete essa relação)
 app.get('/api/conversas/:id/mensagens', requireLogin, async (req, res) => {
   try {
-    const [mensagens] = await pool.query(
-      'SELECT * FROM mensagens WHERE conversa_id = ? ORDER BY enviado_em ASC',
+    const { rows } = await pool.query(
+      'SELECT * FROM mensagens WHERE conversa_id = $1 ORDER BY enviado_em ASC',
       [req.params.id]
     );
-    res.json(mensagens);
+    res.json(rows);
   } catch (erro) {
     console.error('Erro ao buscar mensagens:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// POST /api/conversas/:id/mensagens — envia uma mensagem numa conversa
 app.post('/api/conversas/:id/mensagens', requireLogin, async (req, res) => {
   try {
     const { autor, texto } = req.body;
-
     if (!autor || !texto) {
       return res.status(400).json({ error: 'Autor e texto são obrigatórios.' });
     }
 
-    const [resultado] = await pool.query(
-      'INSERT INTO mensagens (conversa_id, autor, texto) VALUES (?, ?, ?)',
+    const { rows } = await pool.query(
+      'INSERT INTO mensagens (conversa_id, autor, texto) VALUES ($1, $2, $3) RETURNING *',
       [req.params.id, autor, texto]
     );
-
-    const [mensagens] = await pool.query('SELECT * FROM mensagens WHERE id = ?', [resultado.insertId]);
-    res.status(201).json(mensagens[0]);
+    res.status(201).json(rows[0]);
   } catch (erro) {
     console.error('Erro ao enviar mensagem:', erro);
-    if (erro.code === 'ER_NO_REFERENCED_ROW_2') {
+    if (erro.code === '23503') {
       return res.status(400).json({ error: 'Conversa informada não existe.' });
     }
     res.status(500).json({ error: 'Erro no servidor.' });
@@ -626,52 +556,46 @@ app.post('/api/conversas/:id/mensagens', requireLogin, async (req, res) => {
 // ROTAS DE RECEITAS
 // ============================================================
 
-// GET /api/receitas/paciente/:id — histórico de receitas de um paciente
 app.get('/api/receitas/paciente/:id', requireLogin, async (req, res) => {
   try {
-    const [receitas] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT receitas.*, usuarios.nome AS dentista_nome, usuarios.crm AS dentista_crm
        FROM receitas
        LEFT JOIN usuarios ON usuarios.id = receitas.dentista_id
-       WHERE receitas.paciente_id = ?
+       WHERE receitas.paciente_id = $1
        ORDER BY receitas.criado_em DESC`,
       [req.params.id]
     );
-    res.json(receitas);
+    res.json(rows);
   } catch (erro) {
     console.error('Erro ao buscar receitas:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// POST /api/receitas — cria uma receita nova (o PDF continua sendo gerado
-// no navegador; aqui só guardamos o registro pra ter histórico depois)
 app.post('/api/receitas', requireLogin, async (req, res) => {
   try {
     const { paciente_id, texto } = req.body;
-
     if (!paciente_id || !texto) {
       return res.status(400).json({ error: 'Paciente e texto da receita são obrigatórios.' });
     }
 
-    // O dentista que está criando é sempre quem está logado agora
-    const [resultado] = await pool.query(
-      'INSERT INTO receitas (paciente_id, dentista_id, texto) VALUES (?, ?, ?)',
+    const { rows: nova } = await pool.query(
+      'INSERT INTO receitas (paciente_id, dentista_id, texto) VALUES ($1, $2, $3) RETURNING id',
       [paciente_id, req.session.userId, texto]
     );
 
-    const [receitas] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT receitas.*, usuarios.nome AS dentista_nome, usuarios.crm AS dentista_crm
        FROM receitas
        LEFT JOIN usuarios ON usuarios.id = receitas.dentista_id
-       WHERE receitas.id = ?`,
-      [resultado.insertId]
+       WHERE receitas.id = $1`,
+      [nova[0].id]
     );
-
-    res.status(201).json(receitas[0]);
+    res.status(201).json(rows[0]);
   } catch (erro) {
     console.error('Erro ao criar receita:', erro);
-    if (erro.code === 'ER_NO_REFERENCED_ROW_2') {
+    if (erro.code === '23503') {
       return res.status(400).json({ error: 'Paciente informado não existe.' });
     }
     res.status(500).json({ error: 'Erro no servidor.' });
@@ -682,36 +606,30 @@ app.post('/api/receitas', requireLogin, async (req, res) => {
 // ROTAS DE CLÍNICA
 // ============================================================
 
-// GET /api/clinica — dados usados no cabeçalho de PDFs (receita etc.)
 app.get('/api/clinica', requireLogin, async (req, res) => {
   try {
-    const [clinicas] = await pool.query('SELECT * FROM clinica WHERE id = 1');
-    res.json(clinicas[0] || null);
+    const { rows } = await pool.query('SELECT * FROM clinica WHERE id = 1');
+    res.json(rows[0] || null);
   } catch (erro) {
     console.error('Erro ao buscar clínica:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
-// PUT /api/clinica — edita os dados da clínica (usado em Configurações)
 app.put('/api/clinica', requireLogin, async (req, res) => {
   try {
     const { nome, endereco, telefone } = req.body;
-
     if (!nome) {
       return res.status(400).json({ error: 'Nome da clínica é obrigatório.' });
     }
 
-    // "ON DUPLICATE KEY UPDATE" = insere se não existir (id=1), ou
-    // atualiza se já existir — evita ter que checar antes com um SELECT
-    await pool.query(
-      `INSERT INTO clinica (id, nome, endereco, telefone) VALUES (1, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE nome = ?, endereco = ?, telefone = ?`,
-      [nome, endereco || null, telefone || null, nome, endereco || null, telefone || null]
+    const { rows } = await pool.query(
+      `INSERT INTO clinica (id, nome, endereco, telefone) VALUES (1, $1, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET nome = $1, endereco = $2, telefone = $3
+       RETURNING *`,
+      [nome, endereco || null, telefone || null]
     );
-
-    const [clinicas] = await pool.query('SELECT * FROM clinica WHERE id = 1');
-    res.json(clinicas[0]);
+    res.json(rows[0]);
   } catch (erro) {
     console.error('Erro ao editar clínica:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
@@ -719,68 +637,64 @@ app.put('/api/clinica', requireLogin, async (req, res) => {
 });
 
 // ============================================================
-// ROTA DE USUÁRIOS ( só usada pra listar dentistas nos agendamentos)
+// ROTA DE RESUMO DO DASHBOARD
 // ============================================================
 
-// GET /api/usuarios?papel=dentista — lista usuários, filtrando por papel se pedido
-app.get('/api/usuarios', requireLogin, async (req, res) => {
+app.get('/api/dashboard', requireLogin, async (req, res) => {
   try {
-    const { papel } = req.query;
-    const [usuarios] = papel
-      ? await pool.query('SELECT id, nome, email, papel, crm, cargo FROM usuarios WHERE papel = ? ORDER BY nome ASC', [papel])
-      : await pool.query('SELECT id, nome, email, papel, crm, cargo FROM usuarios ORDER BY nome ASC');
-    res.json(usuarios);
-  } catch (erro) {
-    console.error('Erro ao buscar usuários:', erro);
-    res.status(500).json({ error: 'Erro no servidor.' });
-  }
-});
+    const data = req.query.data || formatarDataISO(new Date());
 
-// GET /api/agendamentos/buscar?termo=maria — acha por nome, em QUALQUER data
-app.get('/api/agendamentos/buscar', requireLogin, async (req, res) => {
-  try {
-    const termo = `%${req.query.termo || ''}%`;
-    const [agendamentos] = await pool.query(`
-      SELECT agendamentos.*, pacientes.nome AS paciente_nome, usuarios.nome AS dentista_nome
+    const { rows: totalRows } = await pool.query('SELECT COUNT(*) AS total FROM pacientes');
+    const totalPacientes = Number(totalRows[0].total);
+
+    const { rows: agendaHoje } = await pool.query(
+      `${SELECT_AGENDAMENTO_COMPLETO} WHERE agendamentos.data = $1 ORDER BY agendamentos.horario ASC`,
+      [data]
+    );
+
+    const ontem = calcularOntem(data);
+    const { rows: ontemRows } = await pool.query('SELECT COUNT(*) AS total FROM agendamentos WHERE data = $1', [ontem]);
+    const consultasOntem = Number(ontemRows[0].total);
+
+    const { segunda, domingo } = calcularSemana(data);
+    const { rows: semanaBruta } = await pool.query(
+      'SELECT data, COUNT(*) AS total FROM agendamentos WHERE data BETWEEN $1 AND $2 GROUP BY data',
+      [segunda, domingo]
+    );
+
+    const { rows: statusRows } = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'concluido') AS concluidas,
+        COUNT(*) FILTER (WHERE status IN ('agendado', 'confirmado')) AS agendadas,
+        COUNT(*) FILTER (WHERE status IN ('cancelado', 'faltou')) AS canceladas,
+        COUNT(*) AS total
       FROM agendamentos
-      JOIN pacientes ON pacientes.id = agendamentos.paciente_id
-      LEFT JOIN usuarios ON usuarios.id = agendamentos.dentista_id
-      WHERE pacientes.nome LIKE ?
-      ORDER BY agendamentos.data DESC, agendamentos.horario ASC
-      LIMIT 100
-    `, [termo]);
-    res.json(agendamentos);
-  } catch (erro) {
-    console.error('Erro ao buscar agendamentos:', erro);
-    res.status(500).json({ error: 'Erro no servidor.' });
-  }
-});
+    `);
+    const statusGeral = {
+      concluidas: Number(statusRows[0].concluidas),
+      agendadas: Number(statusRows[0].agendadas),
+      canceladas: Number(statusRows[0].canceladas),
+      total: Number(statusRows[0].total),
+    };
 
-// GET /api/agendamentos/semana?data=... — total de agendamentos na semana (seg-dom) daquela data
-app.get('/api/agendamentos/semana', requireLogin, async (req, res) => {
-  try {
-    const data = req.query.data || new Date().toISOString().slice(0, 10);
-    const [linhas] = await pool.query(`
-      SELECT COUNT(*) AS total FROM agendamentos
-      WHERE data BETWEEN DATE_SUB(?, INTERVAL WEEKDAY(?) DAY)
-                      AND DATE_ADD(DATE_SUB(?, INTERVAL WEEKDAY(?) DAY), INTERVAL 6 DAY)
-    `, [data, data, data, data]);
-    res.json({ total: linhas[0].total });
+    res.json({
+      totalPacientes,
+      agendaHoje,
+      consultasOntem,
+      semanaBruta: semanaBruta.map((s) => ({ data: s.data, total: Number(s.total) })),
+      statusGeral,
+    });
   } catch (erro) {
-    console.error('Erro ao buscar resumo da semana:', erro);
+    console.error('Erro ao buscar resumo do dashboard:', erro);
     res.status(500).json({ error: 'Erro no servidor.' });
   }
 });
 
 // ============================================================
-// FIM DAS ROTAS  
-// ============================================================
-
-
 async function iniciar() {
-  await iniciarBanco(); // garante que as tabelas existem antes do servidor começar a responder
+  await iniciarBanco();
   app.listen(PORT, () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
+    console.log(`Servidor rodando na porta ${PORT}`);
   });
 }
 
