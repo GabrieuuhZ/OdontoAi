@@ -200,15 +200,22 @@ function abrirModalReceita(id) {
         titulo: `Receita — ${paciente.nome}`,
         camposHtml,
         textoSalvar: 'Gerar PDF',
-        aoSalvar(dados) {
+        async aoSalvar(dados) {
+            try {
+                // Salva no banco primeiro, pra ficar registrado no histórico
+                await db.criarReceita(paciente.id, dados.receita);
+            } catch (erro) {
+                alert(`Não foi possível salvar a receita: ${erro.message}`);
+                return;
+            }
             gerarPdfReceita(paciente, dados.receita);
         },
     });
 }
 
-function gerarPdfReceita(paciente, textoReceita) {
-    const clinica = db.getClinica();
-    const perfil = db.getPerfil();
+async function gerarPdfReceita(paciente, textoReceita) {
+    const clinica = await db.getClinica();
+    const perfil = await db.getPerfil();
     const hoje = new Date().toLocaleDateString('pt-BR');
 
     const areaImpressao = document.createElement('div');

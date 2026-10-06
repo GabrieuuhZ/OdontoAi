@@ -123,13 +123,17 @@ function montarTopbarHTML() {
     `;
 }
 
-function sincronizarPerfilNoHeader() {
+async function sincronizarPerfilNoHeader() {
     const nomeHeader = document.getElementById('header-nome-dentista');
     const cargoHeader = document.getElementById('header-cargo-dentista');
     if (nomeHeader && cargoHeader && typeof db !== 'undefined') {
-        const perfil = db.getPerfil();
-        nomeHeader.textContent = perfil.nome;
-        cargoHeader.textContent = perfil.cargo;
+        try {
+            const perfil = await db.getPerfil();
+            nomeHeader.textContent = perfil.nome;
+            cargoHeader.textContent = perfil.cargo;
+        } catch (erro) {
+            console.error('Não foi possível carregar o perfil no topo:', erro);
+        }
     }
 }
 // Fica global porque configuracoes.js chama de novo depois de salvar um novo nome/cargo
@@ -147,7 +151,7 @@ function inserirTopbarNaPagina() {
         dateInput.valueAsDate = new Date();
     }
 
-    sincronizarPerfilNoHeader();
+    sincronizarPerfilNoHeader().catch(() => {});
 }
 
 function paginaPeloHash() {
@@ -237,5 +241,75 @@ async function verificarLogin() {
 verificarLogin().then((autenticado) => {
     if (autenticado) {
         carregarPagina(paginaPeloHash(), false);
+    }
+});
+
+// -------- Assistente de IA flutuante --------
+const btnAssistente = document.getElementById('btn-assistente-ia');
+const painelAssistente = document.getElementById('painel-assistente');
+const btnFecharAssistente = document.getElementById('btn-fechar-assistente');
+const formAssistente = document.getElementById('form-assistente');
+const assistenteMensagens = document.getElementById('assistente-mensagens');
+
+let historicoAssistente = []; // [{ autor: 'usuario' | 'ia', texto }]
+
+btnAssistente?.addEventListener('click', () => {
+    painelAssistente.hidden = !painelAssistente.hidden;
+    if (!painelAssistente.hidden) {
+        document.getElementById('assistente-input')?.focus();
+    }
+});
+
+btnFecharAssistente?.addEventListener('click', () => {
+    painelAssistente.hidden = true;
+});
+
+function adicionarMensagemAssistente(autor, texto) {
+    const bolha = document.createElement('div');
+    bolha.className = `assistente-mensagem ${autor === 'usuario' ? 'assistente-usuario' : 'assistente-bot'}`;
+    const p = document.createElement('p');
+    p.textContent = texto;
+    bolha.appendChild(p);
+    assistenteMensagens.appendChild(bolha);
+    assistenteMensagens.scrollTop = assistenteMensagens.scrollHeight;
+}
+
+formAssistente?.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const input = document.getElementById('assistente-input');
+    const mensagem = input.value.trim();
+    if (!mensagem) return;
+
+    adicionarMensagemAssistente('usuario', mensagem);
+    const historicoAntes = [...historicoAssistente];
+    historicoAssistente.push({ autor: 'usuario', texto: mensagem });
+    input.value = '';
+
+    const carregando = document.createElement('div');
+    carregando.className = 'assistente-carregando';
+    carregando.textContent = 'Digitando...';
+    assistenteMensagens.appendChild(carregando);
+    assistenteMensagens.scrollTop = assistenteMensagens.scrollHeight;
+
+    try {
+        const resposta = await fetch('/api/assistente', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ mensagem, historico: historicoAntes }),
+        });
+        const dados = await resposta.json();
+        carregando.remove();
+
+        if (!resposta.ok) {
+            adicionarMensagemAssistente('ia', dados.error || 'Não foi possível responder agora.');
+            return;
+        }
+
+        adicionarMensagemAssistente('ia', dados.resposta);
+        historicoAssistente.push({ autor: 'ia', texto: dados.resposta });
+    } catch (erro) {
+        carregando.remove();
+        adicionarMensagemAssistente('ia', 'Erro ao conectar com o assistente.');
     }
 });

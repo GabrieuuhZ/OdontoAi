@@ -136,6 +136,39 @@ app.get('/api/usuarios', requireLogin, async (req, res) => {
 });
 
 // ============================================================
+// ROTAS DE CONFIGURAÇÕES 
+// ============================================================
+
+// PUT /api/me — o usuário logado edita o próprio perfil (nome, CRM, cargo, email)
+app.put('/api/me', requireLogin, async (req, res) => {
+  try {
+    const { nome, crm, cargo, email } = req.body;
+    if (!nome || !email) {
+      return res.status(400).json({ error: 'Nome e email são obrigatórios.' });
+    }
+
+    const { rows, rowCount } = await pool.query(
+      `UPDATE usuarios SET nome = $1, crm = $2, cargo = $3, email = $4 WHERE id = $5
+       RETURNING id, nome, email, papel, crm, cargo`,
+      [nome, crm || null, cargo || null, email, req.session.userId]
+    );
+
+    if (rowCount === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    res.json(rows[0]);
+  } catch (erro) {
+    console.error('Erro ao atualizar perfil:', erro);
+    if (erro.code === '23505') {
+      return res.status(409).json({ error: 'Já existe um usuário com esse email.' });
+    }
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
+
+// ============================================================
 // ROTAS DE PACIENTES
 // ============================================================
 
@@ -637,6 +670,77 @@ app.put('/api/clinica', requireLogin, async (req, res) => {
 });
 
 // ============================================================
+// ROTA DO ASSISTENTE DE IA (a "bolinha" flutuante)
+// ============================================================
+
+app.post('/api/assistente', requireLogin, async (req, res) => {
+  try {
+    const { mensagem, historico } = req.body;
+    if (!mensagem) {
+      return res.status(400).json({ error: 'Mensagem é obrigatória.' });
+    }
+
+    // Monta o histórico da conversa no formato que o Gemini espera
+    const contents = [
+      ...(Array.isArray(historico) ? historico : []).map((m) => ({
+        role: m.autor === 'usuario' ? 'user' : 'model',
+        parts: [{ text: m.texto }],
+      })),
+      { role: 'user', parts: [{ text: mensagem }] },
+    ];
+
+    async function chamarGemini(tentativa = 1) {
+      const resposta = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{
+                text: 'Você é o Dentinho, o assistente de IA do sistema OdontoAI, usado por dentistas numa clínica odontológica. ' +
+                  'Ajude com dúvidas rápidas, resumos e sugestões de texto (como rascunhos de receita ou observações). ' +
+                  'Seja objetivo e direto, em português do Brasil. Você não tem acesso ao banco de dados da clínica ' +
+                  'nesta conversa. Deixe claro, quando relevante, que a decisão clínica final é sempre do dentista responsável.',
+              }],
+            },
+            contents,
+          }),
+        }
+      );
+
+      const dados = await resposta.json();
+
+      // Erro 503 = servidor do Google sobrecarregado, não é culpa nossa.
+      // Tenta de novo até 2 vezes, esperando um pouco entre as tentativas.
+      if (!resposta.ok && dados.error?.code === 503 && tentativa < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 1500 * tentativa));
+        return chamarGemini(tentativa + 1);
+      }
+
+      if (!resposta.ok) {
+        console.error('Erro da API Gemini:', dados);
+        throw new Error(
+          dados.error?.code === 503
+            ? 'O serviço de IA está sobrecarregado no momento. Tente de novo em instantes.'
+            : 'Não foi possível consultar a IA agora.'
+        );
+      }
+
+      return dados;
+    }
+
+    const dados = await chamarGemini();
+
+    const texto = dados.candidates?.[0]?.content?.parts?.[0]?.text || 'Não consegui gerar uma resposta.';
+    res.json({ resposta: texto });
+  } catch (erro) {
+    console.error('Erro no assistente:', erro);
+    res.status(500).json({ error: 'Erro no servidor.' });
+  }
+});
+
+// ============================================================
 // ROTA DE RESUMO DO DASHBOARD
 // ============================================================
 
@@ -699,3 +803,4 @@ async function iniciar() {
 }
 
 iniciar();
+

@@ -363,10 +363,11 @@ function renderizarResultadoIA(analise) {
         textareaDiagnostico.value = ''; // sempre começa em branco (o texto só persiste quando vira um diagnóstico salvo)
     }
 
-    const perfil = typeof db !== 'undefined' && db.getPerfil ? db.getPerfil() : null;
-    document.getElementById('ia-assinatura-nome').textContent = perfil ? perfil.nome : '';
-    document.getElementById('ia-assinatura-crm').textContent = perfil ? perfil.crm : '';
-    document.getElementById('ia-assinatura-data').textContent = `Emitido em ${dataHora}`;
+    db.getPerfil().then((perfil) => {
+        document.getElementById('ia-assinatura-nome').textContent = perfil.nome;
+        document.getElementById('ia-assinatura-crm').textContent = perfil.crm || '';
+        document.getElementById('ia-assinatura-data').textContent = `Emitido em ${dataHora}`;
+    }).catch(() => {});
 
     btnSalvarFicha.disabled = !analise.paciente_id;
     btnSalvarFicha.innerHTML = analise.paciente_id

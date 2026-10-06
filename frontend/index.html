@@ -18,6 +18,33 @@
             document.documentElement.classList.add('dark-mode');
         }
     </script>
+
+<button type="button" class="btn-assistente-flutuante" id="btn-assistente-ia" aria-label="Abrir o Dentinho (assistente de IA)">
+    <span class="material-symbols-outlined" aria-hidden="true">dentistry</span>
+</button>
+
+<div id="painel-assistente" class="painel-assistente" hidden>
+    <div class="painel-assistente-header">
+        <div class="painel-assistente-titulo">
+            <span class="material-symbols-outlined" aria-hidden="true">dentistry</span>
+            <h4>Dentinho</h4>
+        </div>
+        <span class="icon-btn" role="button" tabindex="0" id="btn-fechar-assistente" aria-label="Fechar assistente">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </span>
+    </div>
+    <div class="painel-assistente-mensagens" id="assistente-mensagens">
+        <div class="assistente-mensagem assistente-bot">
+            <p>Oi, eu sou o Dentinho! Posso ajudar com dúvidas rápidas, resumos ou sugestões de texto. Lembre-se: a decisão clínica final é sempre sua.</p>
+        </div>
+    </div>
+    <form class="painel-assistente-input" id="form-assistente">
+        <input type="text" id="assistente-input" placeholder="Pergunte alguma coisa..." autocomplete="off">
+        <button type="submit" aria-label="Enviar">
+            <span class="material-symbols-outlined" aria-hidden="true">send</span>
+        </button>
+    </form>
+</div>  
 </head>
 
 <body>

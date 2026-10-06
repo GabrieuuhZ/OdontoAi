@@ -169,6 +169,32 @@ const db = {
         return chamarApi('/analises-ia', { method: 'POST', body: JSON.stringify(dadosAnalise) });
     },
 
+    // -------- Perfil e clínica --------
+    async getPerfil() {
+        return chamarApi('/me');
+    },
+    async salvarPerfil(perfil) {
+        return chamarApi('/me', { method: 'PUT', body: JSON.stringify(perfil) });
+    },
+    async getClinica() {
+        return chamarApi('/clinica');
+    },
+    async salvarClinica(clinica) {
+        return chamarApi('/clinica', { method: 'PUT', body: JSON.stringify(clinica) });
+    },
+
+
+    // -------- Receitas --------
+
+    async getReceitasPaciente(pacienteId) {
+        return chamarApi(`/receitas/paciente/${pacienteId}`);
+    },
+    async criarReceita(pacienteId, texto) {
+        return chamarApi('/receitas', {
+            method: 'POST',
+            body: JSON.stringify({ paciente_id: pacienteId, texto }),
+        });
+    },
 
     // -------- Ainda em localStorage --------
     getConversas() {
@@ -176,18 +202,6 @@ const db = {
     },
     salvarConversas(lista) {
         localStorage.setItem('odontoai_conversas', JSON.stringify(lista));
-    },
-    getPerfil() {
-        return carregar('odontoai_perfil', SEED_PERFIL);
-    },
-    salvarPerfil(perfil) {
-        localStorage.setItem('odontoai_perfil', JSON.stringify(perfil));
-    },
-    getClinica() {
-        return carregar('odontoai_clinica', SEED_CLINICA);
-    },
-    salvarClinica(clinica) {
-        localStorage.setItem('odontoai_clinica', JSON.stringify(clinica));
     },
     proximoId(lista) {
         return lista.length ? Math.max(...lista.map((item) => item.id)) + 1 : 1;
